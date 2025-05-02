@@ -1,0 +1,82 @@
+body, .App {
+  background: #181c20 !important;
+  color: #f3f3f3 !important;
+  min-height: 100vh;
+  margin: 0;
+  font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
+}
+
+.game-container {
+  background: #181c20 !important;
+  color: #f3f3f3 !important;
+}
+
+/* Style the select and label for dark mode */
+#game-select, label[for="game-select"] {
+  background: #23272e;
+  color: #f3f3f3;
+  border: 1px solid #333;
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 1rem;
+}
+
+#game-select:focus {
+  outline: 2px solid #4e8cff;
+}
+
+/* Style the fixed select container */
+.App > div[style*="fixed"] {
+  background: #23272e !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.25) !important;
+}
+
+/* Placeholder game styling for dark mode */
+[class^="GamePlaceholder"] {
+  background: #23272e;
+  color: #f3f3f3;
+  border: 2px dashed #4e8cff;
+}
+
+#root {
+  width: 100%;
+  height: 100%;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.logo {
+  height: 6em;
+  padding: 1.5em;
+  will-change: filter;
+  transition: filter 300ms;
+}
+.logo:hover {
+  filter: drop-shadow(0 0 2em #646cffaa);
+}
+.logo.react:hover {
+  filter: drop-shadow(0 0 2em #61dafbaa);
+}
+
+@keyframes logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  a:nth-of-type(2) .logo {
+    animation: logo-spin infinite 20s linear;
+  }
+}
+
+.card {
+  padding: 2em;
+}
+
+.read-the-docs {
+  color: #888;
+}
