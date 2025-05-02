@@ -2,6 +2,7 @@ import { GameBase } from '../../GameBase';
 import fieldImgUrl from './assets/field.png';
 import basketImgUrl from './assets/basket.png';
 import ballImgUrl from './assets/ball.png';
+import { drawImageContained, getImageDrawRect } from './helpers';
 
 export class BasketballGame extends GameBase {
   private ctx: CanvasRenderingContext2D | null = null;
@@ -25,52 +26,54 @@ export class BasketballGame extends GameBase {
     if (!this.ctx || !this.fieldImg || !this.basketImg || !this.ballImg || !this.canvas) return;
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
-    // --- CONTAIN MODE for field image using base utility ---
-    const canvasW = this.canvas.width;
-    const canvasH = this.canvas.height;
-    const imgW = this.fieldImg.naturalWidth;
-    const imgH = this.fieldImg.naturalHeight;
-    const { drawW, drawH, offsetX, offsetY } = this.calcImageRect(imgW, imgH, canvasW, canvasH, 'contain');
-    this.ctx.drawImage(this.fieldImg, 0, 0, imgW, imgH, offsetX, offsetY, drawW, drawH);
-
-    // --- Basket image scaling ---
-    const basketScale = 1.5; // <--- Adjust this value to scale the basket image
-    const basketImgW = this.basketImg.naturalWidth;
-    const basketImgH = this.basketImg.naturalHeight;
-    let basketWidth = drawW * 0.15;
-    let basketHeight = basketWidth * (basketImgH / basketImgW);
-    basketWidth *= basketScale;
-    basketHeight *= basketScale;
-
-    // Anchor basket by its bottom-left corner
-    const anchorX = offsetX + drawW * 0.05;
-    const anchorY = offsetY + drawH * 0.78;
-    this.ctx.drawImage(
-      this.basketImg,
-      anchorX,
-      anchorY - basketHeight,
-      basketWidth,
-      basketHeight
+    // Draw field (contain, centered)
+    const fieldRect = drawImageContained(
+      this.ctx,
+      this.fieldImg,
+      this.canvas.width,
+      this.canvas.height,
+      'contain',
+      1,
+      0.5,
+      0.5
     );
 
-    // --- Ball image scaling and placement ---
-    const ballScale = 1.0; // <--- Adjust this value to scale the ball image
-    const ballImgW = this.ballImg.naturalWidth;
-    const ballImgH = this.ballImg.naturalHeight;
-    let ballWidth = drawW * 0.07;
-    let ballHeight = ballWidth * (ballImgH / ballImgW);
-    ballWidth *= ballScale;
-    ballHeight *= ballScale;
+    // Draw basket (scale, anchored by bottom-left at 5% x, 78% y of field area)
+    const basketScale = 1.5;
+    const basketAspect = this.basketImg.naturalHeight / this.basketImg.naturalWidth;
+    const basketRect = getImageDrawRect({
+      containerRect: fieldRect,
+      relX: 0.05,
+      relY: 0.78,
+      relW: 0.15,
+      scale: basketScale,
+      aspect: basketAspect,
+      anchorX: 0,
+      anchorY: 1,
+    });
+    this.ctx.drawImage(
+      this.basketImg,
+      0, 0, this.basketImg.naturalWidth, this.basketImg.naturalHeight,
+      basketRect.x, basketRect.y, basketRect.w, basketRect.h
+    );
 
-    // Place ball at the center bottom of the field area
-    const ballAnchorX = offsetX + drawW * 0.7;
-    const ballAnchorY = offsetY + drawH * 0.8;
+    // Draw ball (scale, anchored at 70% x, 80% y of field area)
+    const ballScale = 1.0;
+    const ballAspect = this.ballImg.naturalHeight / this.ballImg.naturalWidth;
+    const ballRect = getImageDrawRect({
+      containerRect: fieldRect,
+      relX: 0.7,
+      relY: 0.8,
+      relW: 0.07,
+      scale: ballScale,
+      aspect: ballAspect,
+      anchorX: 0.5,
+      anchorY: 1,
+    });
     this.ctx.drawImage(
       this.ballImg,
-      ballAnchorX,
-      ballAnchorY - ballHeight,
-      ballWidth,
-      ballHeight
+      0, 0, this.ballImg.naturalWidth, this.ballImg.naturalHeight,
+      ballRect.x, ballRect.y, ballRect.w, ballRect.h
     );
   }
 
