@@ -10,10 +10,17 @@ export class BasketballGame extends GameBase {
   private basketImg: HTMLImageElement | null = null;
   private ballImg: HTMLImageElement | null = null;
   private canvas: HTMLCanvasElement | null = null;
+  private readonly dpr: number = typeof window !== 'undefined' && window.devicePixelRatio ? window.devicePixelRatio : 1;
 
   async init(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d');
+    if (this.ctx) {
+      this.canvas.width = this.canvas.clientWidth * this.dpr;
+      this.canvas.height = this.canvas.clientHeight * this.dpr;
+      this.ctx.setTransform(1, 0, 0, 1, 0, 0); // Reset any existing transforms
+      this.ctx.scale(this.dpr, this.dpr);
+    }
     // Use GameBase's loadImages utility for generic image loading
     const images = await this.loadImages({ field: fieldImgUrl, basket: basketImgUrl, ball: ballImgUrl });
     this.fieldImg = images.field;
@@ -24,14 +31,16 @@ export class BasketballGame extends GameBase {
 
   private render() {
     if (!this.ctx || !this.fieldImg || !this.basketImg || !this.ballImg || !this.canvas) return;
-    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    const logicalWidth = this.canvas.clientWidth;
+    const logicalHeight = this.canvas.clientHeight;
+    this.ctx.clearRect(0, 0, logicalWidth, logicalHeight);
 
     // Draw field (contain, centered)
     const fieldRect = drawImageContained(
       this.ctx,
       this.fieldImg,
-      this.canvas.width,
-      this.canvas.height,
+      logicalWidth,
+      logicalHeight,
       'contain',
       1,
       0.5,
