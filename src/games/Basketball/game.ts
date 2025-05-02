@@ -119,35 +119,6 @@ export class BasketballGame extends GameBase {
     const wallXStart = basketRect.x + basketRect.w * this.basket.wallRelXStart;
     const wallXEnd = basketRect.x + basketRect.w * this.basket.wallRelXEnd;
     const wallYStart = basketRect.y + basketRect.h * this.basket.wallRelYStart;
-    const wallYEnd = basketRect.y + basketRect.h * this.basket.wallRelYEnd;
-    this.ctx.save();
-    this.ctx.strokeStyle = 'red';
-    this.ctx.lineWidth = 2;
-    this.ctx.beginPath();
-    this.ctx.moveTo(wallXEnd, wallYStart);
-    this.ctx.lineTo(wallXEnd, wallYEnd);
-    this.ctx.stroke();
-    this.ctx.restore();
-
-    // Draw horizontal basket wall debug line (blue)
-    this.ctx.save();
-    this.ctx.strokeStyle = 'blue';
-    this.ctx.lineWidth = 2;
-    this.ctx.beginPath();
-    this.ctx.moveTo(wallXEnd, wallYStart);
-    this.ctx.lineTo(wallXStart, wallYStart);
-    this.ctx.stroke();
-    this.ctx.restore();
-
-    // Draw rectangular constraint (green)
-    this.ctx.save();
-    this.ctx.strokeStyle = 'green';
-    this.ctx.lineWidth = 2;
-    this.ctx.strokeRect(
-      wallXStart, wallYStart,
-      wallXEnd - wallXStart, wallYEnd - wallYStart
-    );
-    this.ctx.restore();
 
     // Draw ball (scale, anchored at ballPos)
     const ballScale = 1.0;
@@ -172,14 +143,6 @@ export class BasketballGame extends GameBase {
     const ballXpx = fieldRect.offsetX + fieldRect.drawW * this.ball.pos.x;
     const ballYpx = fieldRect.offsetY + fieldRect.drawH * this.ball.pos.y;
     const ballRadiusPx = this.ball.radius * fieldRect.drawW;
-
-    // Draw ball collision circle (magenta)
-    this.ctx.save();
-    this.ctx.strokeStyle = 'magenta';
-    this.ctx.beginPath();
-    this.ctx.arc(ballXpx, ballYpx, ballRadiusPx, 0, 2 * Math.PI);
-    this.ctx.stroke();
-    this.ctx.restore();
 
     // Horizontal basket wall collision (from below only)
     const wallX = wallXStart;
