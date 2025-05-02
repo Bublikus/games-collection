@@ -1,10 +1,10 @@
-import { useState, useEffect, Suspense, lazy } from 'react'
+import React, { useState, useEffect, Suspense, lazy } from 'react'
 import './App.css'
 
 // Type for game metadata
 interface GameMeta {
   name: string;
-  component: React.LazyExoticComponent<() => JSX.Element>;
+  component: React.LazyExoticComponent<() => React.ReactElement>;
 }
 
 function App() {
@@ -21,7 +21,7 @@ function App() {
       const name = match ? match[1] : path
       return {
         name,
-        component: lazy(loader as () => Promise<{ default: () => JSX.Element }>),
+        component: lazy(loader as () => Promise<{ default: () => React.ReactElement }>),
       }
     })
     setGames(gameEntries)
