@@ -13,6 +13,9 @@ export class BasketballGame extends GameBase {
     minThrowSpeed: 1.5,
     maxThrowSpeed: 2.0,
     throwPower: 2,
+    angle: 0, // current rotation angle in radians
+    angularVel: 0, // angular velocity in radians/sec
+    spinFriction: 0.995, // gentler friction for spin
   };
 
   private basket = {
@@ -133,11 +136,16 @@ export class BasketballGame extends GameBase {
       anchorX: 0.5,
       anchorY: 0.5,
     });
+    // Draw the ball with rotation
+    this.ctx.save();
+    this.ctx.translate(ballRect.x + ballRect.w / 2, ballRect.y + ballRect.h / 2);
+    this.ctx.rotate(this.ball.angle);
     this.ctx.drawImage(
       this.ballImg,
       0, 0, this.ballImg.naturalWidth, this.ballImg.naturalHeight,
-      ballRect.x, ballRect.y, ballRect.w, ballRect.h
+      -ballRect.w / 2, -ballRect.h / 2, ballRect.w, ballRect.h
     );
+    this.ctx.restore();
 
     // Ball position in px
     const ballXpx = fieldRect.offsetX + fieldRect.drawW * this.ball.pos.x;
@@ -277,6 +285,8 @@ export class BasketballGame extends GameBase {
 
     this.ball.vel.x = vx;
     this.ball.vel.y = vy;
+    // Set initial spin to match movement direction (rolling in air)
+    this.ball.angularVel = vx / this.ball.radius;
     this.dragStart = null;
   }
 
@@ -299,6 +309,14 @@ export class BasketballGame extends GameBase {
     this.ball.pos.x += this.ball.vel.x * dt;
     this.ball.pos.y += this.ball.vel.y * dt;
 
+    // Gradually align spin to match movement direction (rolling in air)
+    const targetAngularVel = this.ball.vel.x / this.ball.radius;
+    this.ball.angularVel += (targetAngularVel - this.ball.angularVel) * 0.1;
+
+    // Update rotation
+    this.ball.angle += this.ball.angularVel * dt;
+    this.ball.angularVel *= this.ball.spinFriction; // slow down spin over time
+
     // Bounce off ground
     const ballBottom = this.ball.pos.y + this.ball.radius;
     if (ballBottom > this.field.groundY) {
@@ -307,6 +325,16 @@ export class BasketballGame extends GameBase {
       if (Math.abs(this.ball.vel.y) < 0.1) {
         this.ball.vel.y = 0;
       }
+      // Reverse and gently dampen spin on ground bounce
+      this.ball.angularVel *= -0.95;
+      // Add tangential spin based on horizontal velocity (simulate friction)
+      this.ball.angularVel += this.ball.vel.x * 2;
+    }
+
+    // If the ball is on the ground and moving horizontally, force rolling spin
+    const onGround = (this.ball.pos.y + this.ball.radius) >= this.field.groundY - 0.0001;
+    if (onGround && Math.abs(this.ball.vel.x) > 0.001) {
+      this.ball.angularVel = this.ball.vel.x / this.ball.radius;
     }
 
     // Bounce off left wall
@@ -314,12 +342,16 @@ export class BasketballGame extends GameBase {
       this.ball.pos.x = this.ball.radius;
       this.ball.vel.x *= -this.physics.wallDamping;
       if (Math.abs(this.ball.vel.x) < 0.1) this.ball.vel.x = 0;
+      // Reverse and gently dampen spin on left wall bounce
+      this.ball.angularVel *= -0.95;
     }
     // Bounce off right wall
     if (this.ball.pos.x + this.ball.radius > 1) {
       this.ball.pos.x = 1 - this.ball.radius;
       this.ball.vel.x *= -this.physics.wallDamping;
       if (Math.abs(this.ball.vel.x) < 0.1) this.ball.vel.x = 0;
+      // Reverse and gently dampen spin on right wall bounce
+      this.ball.angularVel *= -0.95;
     }
 
     // Basket wall collision (from right side only)
@@ -385,18 +417,26 @@ export class BasketballGame extends GameBase {
         // Collided with left side
         this.ball.pos.x = (rectLeft - ballRadiusPx - fieldRect.offsetX) / fieldRect.drawW;
         this.ball.vel.x *= -this.physics.wallDamping;
+        // Reverse and gently dampen spin on left basket wall
+        this.ball.angularVel *= -0.95;
       } else if (minOverlap === overlapRight) {
         // Collided with right side
         this.ball.pos.x = (rectRight + ballRadiusPx - fieldRect.offsetX) / fieldRect.drawW;
         this.ball.vel.x *= -this.basket.rightWallDamping;
+        // Reverse and gently dampen spin on right basket wall
+        this.ball.angularVel *= -0.95;
       } else if (minOverlap === overlapTop) {
         // Collided with top
         this.ball.pos.y = (rectTop - ballRadiusPx - fieldRect.offsetY) / fieldRect.drawH;
         this.ball.vel.y *= -this.physics.bounceDamping;
+        // Reverse and gently dampen spin on top basket wall
+        this.ball.angularVel *= -0.95;
       } else if (minOverlap === overlapBottom) {
         // Collided with bottom
         this.ball.pos.y = (rectBottom + ballRadiusPx - fieldRect.offsetY) / fieldRect.drawH;
         this.ball.vel.y *= -this.physics.bounceDamping;
+        // Reverse and gently dampen spin on bottom basket wall
+        this.ball.angularVel *= -0.95;
       }
     }
   }
