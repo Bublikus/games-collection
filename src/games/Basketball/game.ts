@@ -11,6 +11,11 @@ export class BasketballGame extends GameBase {
   private ballImg: HTMLImageElement | null = null;
   private canvas: HTMLCanvasElement | null = null;
   private readonly dpr: number = typeof window !== 'undefined' && window.devicePixelRatio ? window.devicePixelRatio : 1;
+  private ballPos = { x: 0.7, y: 0.8 }; // Current ball position (field-relative 0-1)
+  private ballVel = { x: 0, y: 0 }; // Current ball velocity
+  private ballTarget = { x: 0.7, y: 0.8 }; // Target position (field-relative 0-1)
+  private animationFrameId: number | null = null;
+  private lastTimestamp: number | null = null;
 
   async init(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -26,7 +31,15 @@ export class BasketballGame extends GameBase {
     this.fieldImg = images.field;
     this.basketImg = images.basket;
     this.ballImg = images.ball;
+    this.ballPos = { ...this.ballTarget };
+    this.ballVel = { x: 0, y: 0 };
+    this.lastTimestamp = null;
     this.render();
+    if (this.canvas) {
+      this.canvas.addEventListener('pointermove', this.handlePointerMove);
+      this.canvas.addEventListener('touchmove', this.handleTouchMove, { passive: false });
+    }
+    this.animationFrameId = requestAnimationFrame(this.gameLoop);
   }
 
   private render() {
@@ -66,13 +79,13 @@ export class BasketballGame extends GameBase {
       basketRect.x, basketRect.y, basketRect.w, basketRect.h
     );
 
-    // Draw ball (scale, anchored at 70% x, 80% y of field area)
+    // Draw ball (scale, anchored at ballPos)
     const ballScale = 1.0;
     const ballAspect = this.ballImg.naturalHeight / this.ballImg.naturalWidth;
     const ballRect = getImageDrawRect({
       containerRect: fieldRect,
-      relX: 0.7,
-      relY: 0.8,
+      relX: this.ballPos.x,
+      relY: this.ballPos.y,
       relW: 0.07,
       scale: ballScale,
       aspect: ballAspect,
@@ -99,10 +112,66 @@ export class BasketballGame extends GameBase {
   }
 
   destroy() {
+    if (this.animationFrameId !== null) {
+      cancelAnimationFrame(this.animationFrameId);
+      this.animationFrameId = null;
+    }
+    if (this.canvas) {
+      this.canvas.removeEventListener('pointermove', this.handlePointerMove);
+      this.canvas.removeEventListener('touchmove', this.handleTouchMove);
+    }
     this.ctx = null;
     this.fieldImg = null;
     this.basketImg = null;
     this.ballImg = null;
     this.canvas = null;
   }
+
+  private handlePointerMove = (e: PointerEvent) => {
+    this.setBallTargetFromEvent(e);
+  };
+
+  private handleTouchMove = (e: TouchEvent) => {
+    this.preventGesture(e);
+    if (e.touches.length > 0) {
+      this.setBallTargetFromEvent(e.touches[0]);
+    }
+  };
+
+  private setBallTargetFromEvent(e: { clientX: number, clientY: number }) {
+    if (!this.canvas) return;
+    const rect = this.canvas.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / rect.width;
+    const y = (e.clientY - rect.top) / rect.height;
+    this.ballTarget.x = Math.max(0, Math.min(1, x));
+    this.ballTarget.y = Math.max(0, Math.min(1, y));
+  }
+
+  private gameLoop = (timestamp: number) => {
+    if (!this.lastTimestamp) this.lastTimestamp = timestamp;
+    const dt = Math.min((timestamp - this.lastTimestamp) / 1000, 0.05); // seconds, clamp to avoid big jumps
+    this.lastTimestamp = timestamp;
+    this.updateBall(dt);
+    this.render();
+    this.animationFrameId = requestAnimationFrame(this.gameLoop);
+  };
+
+  private updateBall(dt: number) {
+    // Spring physics (similar to the React/motion example)
+    const damping = 3;
+    const stiffness = 50;
+    const dx = this.ballTarget.x - this.ballPos.x;
+    const dy = this.ballTarget.y - this.ballPos.y;
+    const ax = stiffness * dx - damping * this.ballVel.x;
+    const ay = stiffness * dy - damping * this.ballVel.y;
+    this.ballVel.x += ax * dt;
+    this.ballVel.y += ay * dt;
+    this.ballPos.x += this.ballVel.x * dt;
+    this.ballPos.y += this.ballVel.y * dt;
+  }
+
+  private preventGesture = (e: Event) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
 }
