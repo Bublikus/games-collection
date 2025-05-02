@@ -40,10 +40,17 @@ export class BasketballGame extends GameBase {
     wallDamping: 0.7,
   };
 
+  private images: {
+    field: HTMLImageElement | null,
+    basket: HTMLImageElement | null,
+    ball: HTMLImageElement | null,
+  } = {
+    field: null,
+    basket: null,
+    ball: null,
+  };
+
   private ctx: CanvasRenderingContext2D | null = null;
-  private fieldImg: HTMLImageElement | null = null;
-  private basketImg: HTMLImageElement | null = null;
-  private ballImg: HTMLImageElement | null = null;
   private canvas: HTMLCanvasElement | null = null;
   private readonly dpr: number = typeof window !== 'undefined' && window.devicePixelRatio ? window.devicePixelRatio : 1;
   private animationFrameId: number | null = null;
@@ -62,9 +69,9 @@ export class BasketballGame extends GameBase {
     }
     // Use GameBase's loadImages utility for generic image loading
     const images = await this.loadImages({ field: fieldImgUrl, basket: basketImgUrl, ball: ballImgUrl });
-    this.fieldImg = images.field;
-    this.basketImg = images.basket;
-    this.ballImg = images.ball;
+    this.images.field = images.field;
+    this.images.basket = images.basket;
+    this.images.ball = images.ball;
     this.ball.pos = { ...this.ball.target };
     this.ball.vel = { x: 0, y: 0 };
     this.lastTimestamp = null;
@@ -83,7 +90,7 @@ export class BasketballGame extends GameBase {
   }
 
   private render() {
-    if (!this.ctx || !this.fieldImg || !this.basketImg || !this.ballImg || !this.canvas) return;
+    if (!this.ctx || !this.images.field || !this.images.basket || !this.images.ball || !this.canvas) return;
     const logicalWidth = this.canvas.clientWidth;
     const logicalHeight = this.canvas.clientHeight;
     this.ctx.clearRect(0, 0, logicalWidth, logicalHeight);
@@ -91,7 +98,7 @@ export class BasketballGame extends GameBase {
     // Draw field (contain, centered)
     const fieldRect = drawImageContained(
       this.ctx,
-      this.fieldImg,
+      this.images.field,
       logicalWidth,
       logicalHeight,
       'contain',
@@ -101,7 +108,7 @@ export class BasketballGame extends GameBase {
     );
     
     // Draw basket (scale, anchored by bottom-left at 5% x, 78% y of field area)
-    const basketAspect = this.basketImg.naturalHeight / this.basketImg.naturalWidth;
+    const basketAspect = this.images.basket.naturalHeight / this.images.basket.naturalWidth;
     const basketRect = getImageDrawRect({
       containerRect: fieldRect,
       relX: this.basket.relX,
@@ -113,8 +120,8 @@ export class BasketballGame extends GameBase {
       anchorY: 1,
     });
     this.ctx.drawImage(
-      this.basketImg,
-      0, 0, this.basketImg.naturalWidth, this.basketImg.naturalHeight,
+      this.images.basket,
+      0, 0, this.images.basket.naturalWidth, this.images.basket.naturalHeight,
       basketRect.x, basketRect.y, basketRect.w, basketRect.h
     );
 
@@ -125,7 +132,7 @@ export class BasketballGame extends GameBase {
 
     // Draw ball (scale, anchored at ballPos)
     const ballScale = 1.0;
-    const ballAspect = this.ballImg.naturalHeight / this.ballImg.naturalWidth;
+    const ballAspect = this.images.ball.naturalHeight / this.images.ball.naturalWidth;
     const ballRect = getImageDrawRect({
       containerRect: fieldRect,
       relX: this.ball.pos.x,
@@ -141,8 +148,8 @@ export class BasketballGame extends GameBase {
     this.ctx.translate(ballRect.x + ballRect.w / 2, ballRect.y + ballRect.h / 2);
     this.ctx.rotate(this.ball.angle);
     this.ctx.drawImage(
-      this.ballImg,
-      0, 0, this.ballImg.naturalWidth, this.ballImg.naturalHeight,
+      this.images.ball,
+      0, 0, this.images.ball.naturalWidth, this.images.ball.naturalHeight,
       -ballRect.w / 2, -ballRect.h / 2, ballRect.w, ballRect.h
     );
     this.ctx.restore();
@@ -197,9 +204,9 @@ export class BasketballGame extends GameBase {
       this.canvas.removeEventListener('touchcancel', this.handleTouchEnd);
     }
     this.ctx = null;
-    this.fieldImg = null;
-    this.basketImg = null;
-    this.ballImg = null;
+    this.images.field = null;
+    this.images.basket = null;
+    this.images.ball = null;
     this.canvas = null;
   }
 
@@ -356,12 +363,12 @@ export class BasketballGame extends GameBase {
 
     // Basket wall collision (from right side only)
     // Recompute fieldRect and basketRect as in render
-    if (!this.canvas || !this.basketImg || !this.fieldImg) return;
+    if (!this.canvas || !this.images.basket || !this.images.field) return;
     const logicalWidth = this.canvas.clientWidth;
     const logicalHeight = this.canvas.clientHeight;
     const fieldRect = drawImageContained(
       this.ctx!,
-      this.fieldImg,
+      this.images.field,
       logicalWidth,
       logicalHeight,
       'contain',
@@ -369,7 +376,7 @@ export class BasketballGame extends GameBase {
       0.5,
       0.5
     );
-    const basketAspect = this.basketImg.naturalHeight / this.basketImg.naturalWidth;
+    const basketAspect = this.images.basket.naturalHeight / this.images.basket.naturalWidth;
     const basketRect = getImageDrawRect({
       containerRect: fieldRect,
       relX: this.basket.relX,
