@@ -23,11 +23,14 @@ export class BasketballGame extends GameBase {
     relY: 0.78,
     relW: 0.15,
     scale: 1.5,
-    wallRelXStart: 0.01,
-    wallRelXEnd: 0.4,
-    wallRelYStart: 0.012,
-    wallRelYEnd: 0.39,
-    rightWallDamping: 0.1,
+    // Rectangular constraints in basket-relative coordinates
+    rectConstraints: [
+      // Existing constraint (matches wallRelXStart/End, wallRelYStart/End)
+      { xStart: 0.01, xEnd: 0.4, yStart: 0.012, yEnd: 0.39, damping: 0.1 },
+      // Example new constraints (adjust as needed)
+      { xStart: 0.4, xEnd: 0.46, yStart: 0.31, yEnd: 0.34, damping: 0 },
+      { xStart: 0.86, xEnd: 0.91, yStart: 0.31, yEnd: 0.34, damping: 0 },
+    ],
   };
 
   private field = {
@@ -57,6 +60,7 @@ export class BasketballGame extends GameBase {
   private lastTimestamp: number | null = null;
   private isDragging = false;
   private dragStart: { x: number; y: number; time: number } | null = null;
+  private DEBUG = false;
 
   async init(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -125,11 +129,6 @@ export class BasketballGame extends GameBase {
       basketRect.x, basketRect.y, basketRect.w, basketRect.h
     );
 
-    // Draw basket wall debug line
-    const wallXStart = basketRect.x + basketRect.w * this.basket.wallRelXStart;
-    const wallXEnd = basketRect.x + basketRect.w * this.basket.wallRelXEnd;
-    const wallYStart = basketRect.y + basketRect.h * this.basket.wallRelYStart;
-
     // Draw ball (scale, anchored at ballPos)
     const ballScale = 1.0;
     const ballAspect = this.images.ball.naturalHeight / this.images.ball.naturalWidth;
@@ -154,25 +153,20 @@ export class BasketballGame extends GameBase {
     );
     this.ctx.restore();
 
-    // Ball position in px
-    const ballXpx = fieldRect.offsetX + fieldRect.drawW * this.ball.pos.x;
-    const ballYpx = fieldRect.offsetY + fieldRect.drawH * this.ball.pos.y;
-    const ballRadiusPx = this.ball.radius * fieldRect.drawW;
-
-    // Horizontal basket wall collision (from below only)
-    const wallX = wallXStart;
-    const wallY = wallYStart;
-    // Only block if ball is moving up, crosses the wall from below, and is between wallXStart and wallXEnd
-    if (
-      this.ball.vel.y < 0 &&
-      ballYpx - ballRadiusPx < wallY &&
-      ballYpx + ballRadiusPx > wallY &&
-      ballXpx > wallX &&
-      ballXpx < wallXEnd
-    ) {
-      // Place ball at the wall and bounce
-      this.ball.pos.y = (wallY + ballRadiusPx - fieldRect.offsetY) / fieldRect.drawH;
-      this.ball.vel.y *= -this.physics.bounceDamping;
+    if (this.DEBUG) {
+      // Draw basket wall debug line
+      this.ctx.save();
+      this.ctx.strokeStyle = 'rgba(255,0,0,0.7)';
+      this.ctx.lineWidth = 2;
+      this.ctx.fillStyle = 'rgba(255,0,0,0.7)';
+      for (const rect of this.basket.rectConstraints) {
+        const rx = basketRect.x + basketRect.w * rect.xStart;
+        const rw = basketRect.w * (rect.xEnd - rect.xStart);
+        const ry = basketRect.y + basketRect.h * rect.yStart;
+        const rh = basketRect.h * (rect.yEnd - rect.yStart);
+        this.ctx.fillRect(rx, ry, rw, rh);
+      }
+      this.ctx.restore();
     }
   }
 
@@ -387,63 +381,60 @@ export class BasketballGame extends GameBase {
       anchorX: 0,
       anchorY: 1,
     });
-    const wallXStart = basketRect.x + basketRect.w * this.basket.wallRelXStart;
-    const wallXEnd = basketRect.x + basketRect.w * this.basket.wallRelXEnd;
-    const wallYStart = basketRect.y + basketRect.h * this.basket.wallRelYStart;
-    const wallYEnd = basketRect.y + basketRect.h * this.basket.wallRelYEnd;
     // Ball position in px
     const ballXpx = fieldRect.offsetX + fieldRect.drawW * this.ball.pos.x;
     const ballYpx = fieldRect.offsetY + fieldRect.drawH * this.ball.pos.y;
     const ballRadiusPx = this.ball.radius * fieldRect.drawW;
-    // (Removed special-case basket wall collision here)
-
-    // Rectangular constraint collision
-    const rectLeft = wallXStart;
-    const rectRight = wallXEnd;
-    const rectTop = wallYStart;
-    const rectBottom = wallYEnd;
     // Ball bounding box in px
     const ballLeft = ballXpx - ballRadiusPx;
     const ballRight = ballXpx + ballRadiusPx;
     const ballTop = ballYpx - ballRadiusPx;
     const ballBottomPx = ballYpx + ballRadiusPx;
-    // Check overlap
-    if (
-      ballRight > rectLeft &&
-      ballLeft < rectRight &&
-      ballBottomPx > rectTop &&
-      ballTop < rectBottom
-    ) {
-      // Find the minimal penetration direction
-      const overlapLeft = ballRight - rectLeft;
-      const overlapRight = rectRight - ballLeft;
-      const overlapTop = ballBottomPx - rectTop;
-      const overlapBottom = rectBottom - ballTop;
-      const minOverlap = Math.min(overlapLeft, overlapRight, overlapTop, overlapBottom);
-      if (minOverlap === overlapLeft) {
-        // Collided with left side
-        this.ball.pos.x = (rectLeft - ballRadiusPx - fieldRect.offsetX) / fieldRect.drawW;
-        this.ball.vel.x *= -this.physics.wallDamping;
-        // Reverse and gently dampen spin on left basket wall
-        this.ball.angularVel *= -0.95;
-      } else if (minOverlap === overlapRight) {
-        // Collided with right side
-        this.ball.pos.x = (rectRight + ballRadiusPx - fieldRect.offsetX) / fieldRect.drawW;
-        this.ball.vel.x *= -this.basket.rightWallDamping;
-        // Reverse and gently dampen spin on right basket wall
-        this.ball.angularVel *= -0.95;
-      } else if (minOverlap === overlapTop) {
-        // Collided with top
-        this.ball.pos.y = (rectTop - ballRadiusPx - fieldRect.offsetY) / fieldRect.drawH;
-        this.ball.vel.y *= -this.physics.bounceDamping;
-        // Reverse and gently dampen spin on top basket wall
-        this.ball.angularVel *= -0.95;
-      } else if (minOverlap === overlapBottom) {
-        // Collided with bottom
-        this.ball.pos.y = (rectBottom + ballRadiusPx - fieldRect.offsetY) / fieldRect.drawH;
-        this.ball.vel.y *= -this.physics.bounceDamping;
-        // Reverse and gently dampen spin on bottom basket wall
-        this.ball.angularVel *= -0.95;
+    // Check overlap for all basket constraints
+    for (const rect of this.basket.rectConstraints) {
+      const rectLeft = basketRect.x + basketRect.w * rect.xStart;
+      const rectRight = basketRect.x + basketRect.w * rect.xEnd;
+      const rectTop = basketRect.y + basketRect.h * rect.yStart;
+      const rectBottom = basketRect.y + basketRect.h * rect.yEnd;
+      if (
+        ballRight > rectLeft &&
+        ballLeft < rectRight &&
+        ballBottomPx > rectTop &&
+        ballTop < rectBottom
+      ) {
+        // Find the minimal penetration direction
+        const overlapLeft = ballRight - rectLeft;
+        const overlapRight = rectRight - ballLeft;
+        const overlapTop = ballBottomPx - rectTop;
+        const overlapBottom = rectBottom - ballTop;
+        const minOverlap = Math.min(overlapLeft, overlapRight, overlapTop, overlapBottom);
+        if (minOverlap === overlapLeft) {
+          // Collided with left side
+          this.ball.pos.x = (rectLeft - ballRadiusPx - fieldRect.offsetX) / fieldRect.drawW;
+          this.ball.vel.x *= -this.physics.wallDamping;
+          // Reverse and gently dampen spin on left basket wall
+          this.ball.angularVel *= -0.95;
+        } else if (minOverlap === overlapRight) {
+          // Collided with right side
+          this.ball.pos.x = (rectRight + ballRadiusPx - fieldRect.offsetX) / fieldRect.drawW;
+          this.ball.vel.x *= -rect.damping;
+          // Reverse and gently dampen spin on right basket wall
+          this.ball.angularVel *= -0.95;
+        } else if (minOverlap === overlapTop) {
+          // Collided with top
+          this.ball.pos.y = (rectTop - ballRadiusPx - fieldRect.offsetY) / fieldRect.drawH;
+          this.ball.vel.y *= -this.physics.bounceDamping;
+          // Reverse and gently dampen spin on top basket wall
+          this.ball.angularVel *= -0.95;
+        } else if (minOverlap === overlapBottom) {
+          // Collided with bottom
+          this.ball.pos.y = (rectBottom + ballRadiusPx - fieldRect.offsetY) / fieldRect.drawH;
+          this.ball.vel.y *= -this.physics.bounceDamping;
+          // Reverse and gently dampen spin on bottom basket wall
+          this.ball.angularVel *= -0.95;
+        }
+        // Only handle one collision per frame for stability
+        break;
       }
     }
   }
