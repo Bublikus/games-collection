@@ -1,14 +1,39 @@
 body, .App {
+  position: fixed;
+  top: 0;
+  left: 0;
   background: #181c20 !important;
   color: #f3f3f3 !important;
-  min-height: 100vh;
+  height: 100svh;
+  width: 100svw;
   margin: 0;
   font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
 }
 
 .game-container {
-  background: #181c20 !important;
-  color: #f3f3f3 !important;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.game-select-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 1000;
+  background: rgba(25,25,25,0.95);
+  padding: 12px 16px;
+  border-bottom-right-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
+
+.game-select-label {
+  margin-right: 8px;
 }
 
 /* Style the select and label for dark mode */

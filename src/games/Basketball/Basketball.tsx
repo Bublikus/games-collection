@@ -33,21 +33,7 @@ export const Basketball: React.FC = () => {
   return (
     <canvas
       ref={canvasRef}
-      width={dimensions.width}
-      height={dimensions.height}
-      style={{
-        display: 'block',
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        width: '100vw',
-        height: '100vh',
-        margin: 0,
-        padding: 0,
-        background: '#222',
-        borderRadius: 0,
-        zIndex: 0,
-      }}
+      style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
     />
   );
 };

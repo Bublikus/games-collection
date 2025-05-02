@@ -33,20 +33,9 @@ function App() {
   const SelectedGameComponent = games.find(g => g.name === selectedGame)?.component
 
   return (
-    <div className="App" style={{ height: '100vh', width: '100vw', margin: 0, padding: 0, position: 'relative', overflow: 'hidden' }}>
-      <div
-        style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          zIndex: 1000,
-          background: 'rgba(255,255,255,0.95)',
-          padding: '12px 16px',
-          borderBottomRightRadius: 12,
-          boxShadow: '0 2px 8px rgba(0,0,0,0.04)'
-        }}
-      >
-        <label htmlFor="game-select" style={{ marginRight: 8 }}>Choose a game: </label>
+    <div className="App">
+      <div className="game-select-container">
+        <label htmlFor="game-select" className="game-select-label">Choose a game: </label>
         <select
           id="game-select"
           value={selectedGame}
@@ -57,20 +46,7 @@ function App() {
           ))}
         </select>
       </div>
-      <div
-        className="game-container"
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          width: '100vw',
-          height: '100vh',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          background: '#f8f8f8',
-        }}
-      >
+      <div className="game-container">
         {SelectedGameComponent ? (
           <Suspense fallback={<div>Loading game...</div>}>
             <SelectedGameComponent />
