@@ -25,11 +25,21 @@ export class BasketballGame extends GameBase {
     scale: 1.5,
     // Rectangular constraints in basket-relative coordinates
     rectConstraints: [
-      // Existing constraint (matches wallRelXStart/End, wallRelYStart/End)
-      { xStart: 0.01, xEnd: 0.4, yStart: 0.012, yEnd: 0.39, damping: 0.1 },
-      // Example new constraints (adjust as needed)
-      { xStart: 0.4, xEnd: 0.46, yStart: 0.31, yEnd: 0.34, damping: 0 },
-      { xStart: 0.86, xEnd: 0.91, yStart: 0.31, yEnd: 0.34, damping: 0 },
+      // Left side
+      {
+        coords: { xStart: 0.01, xEnd: 0.4, yStart: 0.012, yEnd: 0.39 },
+        damping: { left: 0.9, right: 0.1, top: 0.9, bottom: 0.9 }
+      },
+      // Middle
+      {
+        coords: { xStart: 0.4, xEnd: 0.46, yStart: 0.31, yEnd: 0.34 },
+        damping: { left: 0.0, right: 0.0, top: 0.0, bottom: 0.0 }
+      },
+      // Right side
+      {
+        coords: { xStart: 0.86, xEnd: 0.91, yStart: 0.31, yEnd: 0.34 },
+        damping: { left: 0.0, right: 0.9, top: 0.0, bottom: 0.9 }
+      },
     ],
   };
 
@@ -160,10 +170,11 @@ export class BasketballGame extends GameBase {
       this.ctx.lineWidth = 2;
       this.ctx.fillStyle = 'rgba(255,0,0,0.7)';
       for (const rect of this.basket.rectConstraints) {
-        const rx = basketRect.x + basketRect.w * rect.xStart;
-        const rw = basketRect.w * (rect.xEnd - rect.xStart);
-        const ry = basketRect.y + basketRect.h * rect.yStart;
-        const rh = basketRect.h * (rect.yEnd - rect.yStart);
+        const { xStart, xEnd, yStart, yEnd } = rect.coords;
+        const rx = basketRect.x + basketRect.w * xStart;
+        const rw = basketRect.w * (xEnd - xStart);
+        const ry = basketRect.y + basketRect.h * yStart;
+        const rh = basketRect.h * (yEnd - yStart);
         this.ctx.fillRect(rx, ry, rw, rh);
       }
       this.ctx.restore();
@@ -382,59 +393,81 @@ export class BasketballGame extends GameBase {
       anchorY: 1,
     });
     // Ball position in px
-    const ballXpx = fieldRect.offsetX + fieldRect.drawW * this.ball.pos.x;
-    const ballYpx = fieldRect.offsetY + fieldRect.drawH * this.ball.pos.y;
+    let ballXpx = fieldRect.offsetX + fieldRect.drawW * this.ball.pos.x;
+    let ballYpx = fieldRect.offsetY + fieldRect.drawH * this.ball.pos.y;
     const ballRadiusPx = this.ball.radius * fieldRect.drawW;
-    // Ball bounding box in px
-    const ballLeft = ballXpx - ballRadiusPx;
-    const ballRight = ballXpx + ballRadiusPx;
-    const ballTop = ballYpx - ballRadiusPx;
-    const ballBottomPx = ballYpx + ballRadiusPx;
-    // Check overlap for all basket constraints
+    // Check overlap for all basket constraints (spherical bounce)
     for (const rect of this.basket.rectConstraints) {
-      const rectLeft = basketRect.x + basketRect.w * rect.xStart;
-      const rectRight = basketRect.x + basketRect.w * rect.xEnd;
-      const rectTop = basketRect.y + basketRect.h * rect.yStart;
-      const rectBottom = basketRect.y + basketRect.h * rect.yEnd;
-      if (
-        ballRight > rectLeft &&
-        ballLeft < rectRight &&
-        ballBottomPx > rectTop &&
-        ballTop < rectBottom
-      ) {
-        // Find the minimal penetration direction
-        const overlapLeft = ballRight - rectLeft;
-        const overlapRight = rectRight - ballLeft;
-        const overlapTop = ballBottomPx - rectTop;
-        const overlapBottom = rectBottom - ballTop;
-        const minOverlap = Math.min(overlapLeft, overlapRight, overlapTop, overlapBottom);
-        if (minOverlap === overlapLeft) {
-          // Collided with left side
-          this.ball.pos.x = (rectLeft - ballRadiusPx - fieldRect.offsetX) / fieldRect.drawW;
-          this.ball.vel.x *= -this.physics.wallDamping;
-          // Reverse and gently dampen spin on left basket wall
-          this.ball.angularVel *= -0.95;
-        } else if (minOverlap === overlapRight) {
-          // Collided with right side
-          this.ball.pos.x = (rectRight + ballRadiusPx - fieldRect.offsetX) / fieldRect.drawW;
-          this.ball.vel.x *= -rect.damping;
-          // Reverse and gently dampen spin on right basket wall
-          this.ball.angularVel *= -0.95;
-        } else if (minOverlap === overlapTop) {
-          // Collided with top
-          this.ball.pos.y = (rectTop - ballRadiusPx - fieldRect.offsetY) / fieldRect.drawH;
-          this.ball.vel.y *= -this.physics.bounceDamping;
-          // Reverse and gently dampen spin on top basket wall
-          this.ball.angularVel *= -0.95;
-        } else if (minOverlap === overlapBottom) {
-          // Collided with bottom
-          this.ball.pos.y = (rectBottom + ballRadiusPx - fieldRect.offsetY) / fieldRect.drawH;
-          this.ball.vel.y *= -this.physics.bounceDamping;
-          // Reverse and gently dampen spin on bottom basket wall
-          this.ball.angularVel *= -0.95;
+      const { xStart, xEnd, yStart, yEnd } = rect.coords;
+      const rectLeft = basketRect.x + basketRect.w * xStart;
+      const rectRight = basketRect.x + basketRect.w * xEnd;
+      const rectTop = basketRect.y + basketRect.h * yStart;
+      const rectBottom = basketRect.y + basketRect.h * yEnd;
+      const rectW = rectRight - rectLeft;
+      const rectH = rectBottom - rectTop;
+
+      // Find closest point on rect to ball center
+      const closest = this.closestPointOnRect(
+        ballXpx, ballYpx,
+        rectLeft, rectTop, rectW, rectH
+      );
+      // Vector from closest point to ball center
+      const dx = ballXpx - closest.x;
+      const dy = ballYpx - closest.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+
+      if (dist < ballRadiusPx) {
+        // Collision! Move ball out of rect along normal
+        const nx = dx / (dist || 1e-6);
+        const ny = dy / (dist || 1e-6);
+        // Move ball to just outside the rect
+        ballXpx = closest.x + nx * ballRadiusPx;
+        ballYpx = closest.y + ny * ballRadiusPx;
+        // Find which side is closest
+        const overlapLeft = Math.abs(closest.x - rectLeft);
+        const overlapRight = Math.abs(closest.x - rectRight);
+        const overlapTop = Math.abs(closest.y - rectTop);
+        const overlapBottom = Math.abs(closest.y - rectBottom);
+        let damping = rect.damping.left;
+        let minOverlap = overlapLeft;
+        if (overlapRight < minOverlap) {
+          damping = rect.damping.right;
+          minOverlap = overlapRight;
         }
-        // Only handle one collision per frame for stability
-        break;
+        if (overlapTop < minOverlap) {
+          damping = rect.damping.top;
+          minOverlap = overlapTop;
+        }
+        if (overlapBottom < minOverlap) {
+          damping = rect.damping.bottom;
+          minOverlap = overlapBottom;
+        }
+        // Reflect velocity (convert to px/sec for accuracy)
+        const vpx = this.ball.vel.x * fieldRect.drawW;
+        const vpy = this.ball.vel.y * fieldRect.drawH;
+        const vDotN = vpx * nx + vpy * ny;
+        // Decompose into normal and tangential components
+        const vNormX = vDotN * nx;
+        const vNormY = vDotN * ny;
+        const vTanX = vpx - vNormX;
+        const vTanY = vpy - vNormY;
+        // Reflect and dampen only the normal component using the selected side's damping
+        const vNormXNew = -vNormX * damping;
+        const vNormYNew = -vNormY * damping;
+        // Combine
+        const newVpx = vTanX + vNormXNew;
+        const newVpy = vTanY + vNormYNew;
+        // Convert back to rel units
+        this.ball.vel.x = newVpx / fieldRect.drawW;
+        this.ball.vel.y = newVpy / fieldRect.drawH;
+
+        // Update ball position in relative units
+        this.ball.pos.x = (ballXpx - fieldRect.offsetX) / fieldRect.drawW;
+        this.ball.pos.y = (ballYpx - fieldRect.offsetY) / fieldRect.drawH;
+
+        // Reverse and gently dampen spin
+        this.ball.angularVel *= -0.95;
+        break; // Only handle one collision per frame
       }
     }
   }
@@ -451,6 +484,17 @@ export class BasketballGame extends GameBase {
     const y = (e.clientY - rect.top) / rect.height;
     this.ball.pos.x = Math.max(0, Math.min(1, x));
     this.ball.pos.y = Math.max(0, Math.min(1, y));
+  }
+
+  // Helper: Closest point on rectangle to a point (in px)
+  private closestPointOnRect(
+    px: number, py: number,
+    rx: number, ry: number, rw: number, rh: number
+  ) {
+    // Clamp px, py to the rectangle
+    const cx = Math.max(rx, Math.min(px, rx + rw));
+    const cy = Math.max(ry, Math.min(py, ry + rh));
+    return { x: cx, y: cy };
   }
 }
 
