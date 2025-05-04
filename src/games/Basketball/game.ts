@@ -2,6 +2,7 @@ import { GameBase } from '../../GameBase';
 import fieldImgUrl from './assets/field.png';
 import basketImgUrl from './assets/basket.png';
 import ballImgUrl from './assets/ball.png';
+import basketNetImgUrl from './assets/basket-net.png';
 import { drawImageContained, getImageDrawRect } from './helpers';
 
 export class BasketballGame extends GameBase {
@@ -23,6 +24,8 @@ export class BasketballGame extends GameBase {
     relY: 0.78,
     relW: 0.15,
     scale: 1.5,
+    basketNetOffsetX: 0.42, // fraction of basket width
+    basketNetOffsetY: -0.5, // fraction of basket height
     // Rectangular constraints in basket-relative coordinates
     rectConstraints: [
       // Left side
@@ -57,10 +60,12 @@ export class BasketballGame extends GameBase {
     field: HTMLImageElement | null,
     basket: HTMLImageElement | null,
     ball: HTMLImageElement | null,
+    basketNet: HTMLImageElement | null,
   } = {
     field: null,
     basket: null,
     ball: null,
+    basketNet: null,
   };
 
   private ctx: CanvasRenderingContext2D | null = null;
@@ -82,10 +87,11 @@ export class BasketballGame extends GameBase {
       this.ctx.scale(this.dpr, this.dpr);
     }
     // Use GameBase's loadImages utility for generic image loading
-    const images = await this.loadImages({ field: fieldImgUrl, basket: basketImgUrl, ball: ballImgUrl });
+    const images = await this.loadImages({ field: fieldImgUrl, basket: basketImgUrl, ball: ballImgUrl, basketNet: basketNetImgUrl });
     this.images.field = images.field;
     this.images.basket = images.basket;
     this.images.ball = images.ball;
+    this.images.basketNet = images.basketNet;
     this.ball.pos = { ...this.ball.target };
     this.ball.vel = { x: 0, y: 0 };
     this.lastTimestamp = null;
@@ -104,7 +110,7 @@ export class BasketballGame extends GameBase {
   }
 
   private render() {
-    if (!this.ctx || !this.images.field || !this.images.basket || !this.images.ball || !this.canvas) return;
+    if (!this.ctx || !this.images.field || !this.images.basket || !this.images.ball || !this.images.basketNet || !this.canvas) return;
     const logicalWidth = this.canvas.clientWidth;
     const logicalHeight = this.canvas.clientHeight;
     this.ctx.clearRect(0, 0, logicalWidth, logicalHeight);
@@ -162,6 +168,18 @@ export class BasketballGame extends GameBase {
       -ballRect.w / 2, -ballRect.h / 2, ballRect.w, ballRect.h
     );
     this.ctx.restore();
+    // Draw basket net (keep its aspect, scale with basket, anchor bottom-left)
+    const basketNetScale = basketRect.w / this.images.basket.naturalWidth;
+    const basketNetW = this.images.basketNet.naturalWidth * basketNetScale;
+    const basketNetH = this.images.basketNet.naturalHeight * basketNetScale;
+    // Apply calibration offsets (fractions of basket size, scaled)
+    const netOffsetX = this.basket.basketNetOffsetX * basketRect.w;
+    const netOffsetY = this.basket.basketNetOffsetY * basketRect.h;
+    this.ctx.drawImage(
+      this.images.basketNet,
+      0, 0, this.images.basketNet.naturalWidth, this.images.basketNet.naturalHeight,
+      basketRect.x + netOffsetX, basketRect.y + basketRect.h - basketNetH + netOffsetY, basketNetW, basketNetH
+    );
 
     if (this.DEBUG) {
       // Draw basket wall debug line
@@ -212,6 +230,7 @@ export class BasketballGame extends GameBase {
     this.images.field = null;
     this.images.basket = null;
     this.images.ball = null;
+    this.images.basketNet = null;
     this.canvas = null;
   }
 
