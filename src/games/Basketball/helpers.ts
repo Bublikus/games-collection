@@ -15,21 +15,25 @@ export interface ImageRect {
  * @param rectW Container width
  * @param rectH Container height
  * @param mode 'contain' (default) or 'cover'
+ * @param originX 0=left, 1=right (default 0.5)
+ * @param originY 0=top, 1=bottom (default 0.5)
  */
 export function calcImageRect(
   imgW: number,
   imgH: number,
   rectW: number,
   rectH: number,
-  mode: ImageRectMode = 'contain'
+  mode: ImageRectMode = 'contain',
+  originX: number = 0.5,
+  originY: number = 0.5
 ): ImageRect {
   const scale = mode === 'cover'
     ? Math.max(rectW / imgW, rectH / imgH)
     : Math.min(rectW / imgW, rectH / imgH);
   const drawW = imgW * scale;
   const drawH = imgH * scale;
-  const offsetX = (rectW - drawW) / 2;
-  const offsetY = (rectH - drawH) / 2;
+  const offsetX = (rectW - drawW) * originX;
+  const offsetY = (rectH - drawH) * originY;
   return { drawW, drawH, offsetX, offsetY, scale };
 }
 
@@ -45,14 +49,18 @@ export function drawImageContained(
   mode: ImageRectMode = 'contain',
   scale: number = 1,
   anchorX: number = 0.5, // 0=left, 0.5=center, 1=right (relative to drawn image)
-  anchorY: number = 0.5  // 0=top, 0.5=center, 1=bottom (relative to drawn image)
+  anchorY: number = 0.5,  // 0=top, 0.5=center, 1=bottom (relative to drawn image)
+  originX: number = 0.5,  // 0=left, 0.5=center, 1=right (focus point in container)
+  originY: number = 0.5   // 0=top, 0.5=center, 1=bottom (focus point in container)
 ): ImageRect {
   const { drawW, drawH, offsetX, offsetY, scale: baseScale } = calcImageRect(
     img.naturalWidth,
     img.naturalHeight,
     containerW,
     containerH,
-    mode
+    mode,
+    originX,
+    originY
   );
   const finalW = drawW * scale;
   const finalH = drawH * scale;

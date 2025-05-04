@@ -47,7 +47,7 @@ export class BasketballGame extends GameBase {
   };
 
   private field = {
-    groundY: 0.85,
+    groundY: 0.8,
   };
 
   private physics = {
@@ -115,16 +115,27 @@ export class BasketballGame extends GameBase {
     const logicalHeight = this.canvas.clientHeight;
     this.ctx.clearRect(0, 0, logicalWidth, logicalHeight);
 
-    // Draw field (contain, centered)
+    // Draw field (cover, centered or shifted by aspect)
+    let originX = 0.5;
+    let originY = 0.5;
+    if (logicalWidth < logicalHeight) {
+      // Mobile/portrait: shift horizontally (show left side)
+      originX = 0.2;
+    } else if (logicalWidth > logicalHeight * 1.2) {
+      // Wide/landscape: shift vertically (show top)
+      originY = 0.5;
+    }
     const fieldRect = drawImageContained(
       this.ctx,
       this.images.field,
       logicalWidth,
       logicalHeight,
-      'contain',
+      'cover',
       1,
       0.5,
-      0.5
+      0.5,
+      originX,
+      originY
     );
     
     // Draw basket (scale, anchored by bottom-left at 5% x, 78% y of field area)
@@ -395,7 +406,7 @@ export class BasketballGame extends GameBase {
       this.images.field,
       logicalWidth,
       logicalHeight,
-      'contain',
+      'cover',
       1,
       0.5,
       0.5
