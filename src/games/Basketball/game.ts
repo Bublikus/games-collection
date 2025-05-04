@@ -76,6 +76,8 @@ export class BasketballGame extends GameBase {
   private isDragging = false;
   private dragStart: { x: number; y: number; time: number } | null = null;
   private DEBUG = false;
+  private scoreMessageTimer: number = 0;
+  private wasInGoalArea: boolean = false;
 
   async init(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -207,6 +209,40 @@ export class BasketballGame extends GameBase {
         this.ctx.fillRect(rx, ry, rw, rh);
       }
       this.ctx.restore();
+
+      // Draw goal rectangle (rim area) for debugging
+      this.ctx.save();
+      this.ctx.strokeStyle = 'rgba(0,255,0,0.8)';
+      this.ctx.lineWidth = 2;
+      this.ctx.fillStyle = 'rgba(0,255,0,0.2)';
+      const leftConstraint = this.basket.rectConstraints[1].coords;
+      const rightConstraint = this.basket.rectConstraints[2].coords;
+      const rimTopY = basketRect.y + basketRect.h * Math.max(leftConstraint.yStart, rightConstraint.yStart);
+      const rimBottomY = basketRect.y + basketRect.h * Math.min(leftConstraint.yEnd, rightConstraint.yEnd);
+      const rimLeftX = basketRect.x + basketRect.w * leftConstraint.xEnd;
+      const rimRightX = basketRect.x + basketRect.w * rightConstraint.xStart;
+      const rimW = rimRightX - rimLeftX;
+      const rimH = rimBottomY - rimTopY;
+      this.ctx.fillRect(rimLeftX, rimTopY, rimW, rimH);
+      this.ctx.strokeRect(rimLeftX, rimTopY, rimW, rimH);
+      this.ctx.restore();
+    }
+
+    // Draw score message if timer is active
+    if (this.scoreMessageTimer > 0 && this.ctx) {
+      this.ctx.save();
+      this.ctx.font = `bold ${Math.floor(logicalHeight * 0.08)}px sans-serif`;
+      this.ctx.fillStyle = "#FFD700";
+      this.ctx.textAlign = "center";
+      this.ctx.textBaseline = "top";
+      this.ctx.strokeStyle = "#000";
+      this.ctx.lineWidth = 4;
+      const msg = "Score!";
+      const x = logicalWidth / 2;
+      const y = logicalHeight * 0.05;
+      this.ctx.strokeText(msg, x, y);
+      this.ctx.fillText(msg, x, y);
+      this.ctx.restore();
     }
   }
 
@@ -220,6 +256,8 @@ export class BasketballGame extends GameBase {
 
   reset() {
     this.render();
+    this.scoreMessageTimer = 0;
+    this.wasInGoalArea = false;
   }
 
   destroy() {
@@ -499,6 +537,41 @@ export class BasketballGame extends GameBase {
         this.ball.angularVel *= -0.95;
         break; // Only handle one collision per frame
       }
+    }
+
+    // --- GOAL DETECTION ---
+    if (!this.canvas || !this.images.basket || !this.images.field) return;
+    const leftConstraint = this.basket.rectConstraints[1].coords;
+    const rightConstraint = this.basket.rectConstraints[2].coords;
+    // Get the vertical rim range in px (use the overlap of left and right constraints)
+    const rimTopY = basketRect.y + basketRect.h * Math.max(leftConstraint.yStart, rightConstraint.yStart);
+    const rimBottomY = basketRect.y + basketRect.h * Math.min(leftConstraint.yEnd, rightConstraint.yEnd);
+    // Get the horizontal rim range in px
+    const rimLeftX = basketRect.x + basketRect.w * leftConstraint.xEnd;
+    const rimRightX = basketRect.x + basketRect.w * rightConstraint.xStart;
+    // Ball center in px
+    const ballXpx_goal = fieldRect.offsetX + fieldRect.drawW * this.ball.pos.x;
+    const ballYpx_goal = fieldRect.offsetY + fieldRect.drawH * this.ball.pos.y;
+    // Detect if ball is within the rim rectangle
+    const inGoalArea =
+      ballXpx_goal > rimLeftX &&
+      ballXpx_goal < rimRightX &&
+      ballYpx_goal > rimTopY &&
+      ballYpx_goal < rimBottomY;
+
+    // Only count a goal when entering the area from above and moving down
+    if (
+      inGoalArea &&
+      !this.wasInGoalArea &&
+      this.ball.vel.y > 0
+    ) {
+      this.scoreMessageTimer = 2.0; // show for 2 seconds
+    }
+    this.wasInGoalArea = inGoalArea;
+    // Decrement score message timer
+    if (this.scoreMessageTimer > 0) {
+      this.scoreMessageTimer -= dt;
+      if (this.scoreMessageTimer < 0) this.scoreMessageTimer = 0;
     }
   }
 
