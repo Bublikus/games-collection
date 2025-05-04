@@ -231,15 +231,38 @@ export class BasketballGame extends GameBase {
     // Draw score message if timer is active
     if (this.scoreMessageTimer > 0 && this.ctx) {
       this.ctx.save();
+      const logicalWidth = this.canvas.clientWidth;
+      const logicalHeight = this.canvas.clientHeight;
+      const msg = "Score!";
+
+      // Animation: from below to final position
+      const appearDuration = 0.3; // seconds for the animation to reach final position
+      const totalDuration = 2.0; // matches your timer
+      const t = Math.min(1, (totalDuration - this.scoreMessageTimer) / appearDuration); // 0 to 1
+      const ease = t < 1 ? 1 - Math.pow(1 - t, 2) : 1; // ease out
+
+      const baseY = logicalHeight * 0.05;
+      const startY = baseY + logicalHeight * 0.05; // start lower
+      const y = startY - (startY - baseY) * ease;
+
+      // Optional: fade in/out
+      let alpha = 1;
+      if (this.scoreMessageTimer > totalDuration - appearDuration) {
+        // Fade in
+        alpha = t;
+      } else if (this.scoreMessageTimer < 0.3) {
+        // Fade out at the end
+        alpha = Math.max(0, this.scoreMessageTimer / 0.3);
+      }
+
+      this.ctx.globalAlpha = alpha;
       this.ctx.font = `bold ${Math.floor(logicalHeight * 0.08)}px sans-serif`;
       this.ctx.fillStyle = "#FFD700";
       this.ctx.textAlign = "center";
       this.ctx.textBaseline = "top";
       this.ctx.strokeStyle = "#000";
       this.ctx.lineWidth = 4;
-      const msg = "Score!";
       const x = logicalWidth / 2;
-      const y = logicalHeight * 0.05;
       this.ctx.strokeText(msg, x, y);
       this.ctx.fillText(msg, x, y);
       this.ctx.restore();
