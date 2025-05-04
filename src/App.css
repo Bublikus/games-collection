@@ -36,6 +36,17 @@ body, .App {
   margin-right: 8px;
 }
 
+.play-pause-btn {
+  position: fixed;
+  top: 0;
+  right: 0;
+  z-index: 1000;
+  border-radius: 0 0 0 12px;
+  outline: none !important;
+  border: none !important;
+  font-size: 22px;
+}
+
 /* Style the select and label for dark mode */
 #game-select, label[for="game-select"] {
   background: #23272e;

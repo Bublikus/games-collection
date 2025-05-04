@@ -1,15 +1,17 @@
 import React, { useState, useEffect, Suspense, lazy } from 'react'
+import { GameProps } from './types';
 import './App.css'
 
 // Type for game metadata
 interface GameMeta {
   name: string;
-  component: React.LazyExoticComponent<() => React.ReactElement>;
+  component: React.LazyExoticComponent<(props: GameProps) => React.ReactElement>;
 }
 
 function App() {
   const [games, setGames] = useState<GameMeta[]>([])
   const [selectedGame, setSelectedGame] = useState<string>('')
+  const [paused, setPaused] = useState(false)
 
   // Dynamically import all games from the games folder
   useEffect(() => {
@@ -21,7 +23,7 @@ function App() {
       const name = match ? match[1] : path
       return {
         name,
-        component: lazy(loader as () => Promise<{ default: () => React.ReactElement }>),
+        component: lazy(loader as () => Promise<{ default: (props: GameProps) => React.ReactElement }>),
       }
     })
     setGames(gameEntries)
@@ -46,10 +48,17 @@ function App() {
           ))}
         </select>
       </div>
+      <button
+        className="play-pause-btn"
+        onClick={() => setPaused(p => !p)}
+        aria-label={paused ? 'Play' : 'Pause'}
+      >
+        {paused ? '▶️' : '⏸️'}
+      </button>
       <div className="game-container">
         {SelectedGameComponent ? (
           <Suspense fallback={<div>Loading game...</div>}>
-            <SelectedGameComponent />
+            <SelectedGameComponent isPlaying={!paused} />
           </Suspense>
         ) : (
           <div>No game selected</div>

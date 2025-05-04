@@ -10,6 +10,11 @@ export abstract class GameBase {
   abstract start(): void;
 
   /**
+   * Called to play the game
+   */
+  abstract play(): void;
+
+  /**
    * Called to pause the game loop
    */
   abstract pause(): void;

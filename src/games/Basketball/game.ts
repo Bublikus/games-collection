@@ -78,7 +78,8 @@ export class BasketballGame extends GameBase {
   private DEBUG = false;
   private scoreMessageTimer: number = 0;
   private wasInGoalArea: boolean = false;
-
+  private isPlaying = false;
+  
   async init(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d');
@@ -108,7 +109,7 @@ export class BasketballGame extends GameBase {
       this.canvas.addEventListener('touchend', this.handleTouchEnd);
       this.canvas.addEventListener('touchcancel', this.handleTouchEnd);
     }
-    this.animationFrameId = requestAnimationFrame(this.gameLoop);
+    // Do not start animation frame here
   }
 
   private render() {
@@ -270,11 +271,19 @@ export class BasketballGame extends GameBase {
   }
 
   start() {
-    // No-op for now
+    this.isPlaying = true;
+    if (this.animationFrameId === null) {
+      this.lastTimestamp = null;
+      this.animationFrameId = requestAnimationFrame(this.gameLoop);
+    }
+  }
+
+  play() {
+    this.isPlaying = true;
   }
 
   pause() {
-    // No-op for now
+    this.isPlaying = false;
   }
 
   reset() {
@@ -397,13 +406,15 @@ export class BasketballGame extends GameBase {
     if (!this.lastTimestamp) this.lastTimestamp = timestamp;
     const dt = Math.min((timestamp - this.lastTimestamp) / 1000, 0.05); // seconds, clamp to avoid big jumps
     this.lastTimestamp = timestamp;
-    if (!this.isDragging) {
-      this.updateBall(dt);
-    }
-    // Always decrement score message timer, even while dragging
-    if (this.scoreMessageTimer > 0) {
-      this.scoreMessageTimer -= dt;
-      if (this.scoreMessageTimer < 0) this.scoreMessageTimer = 0;
+    if (this.isPlaying) {
+      if (!this.isDragging) {
+        this.updateBall(dt);
+      }
+      // Decrement score message timer only when playing
+      if (this.scoreMessageTimer > 0) {
+        this.scoreMessageTimer -= dt;
+        if (this.scoreMessageTimer < 0) this.scoreMessageTimer = 0;
+      }
     }
     this.render();
     this.animationFrameId = requestAnimationFrame(this.gameLoop);
