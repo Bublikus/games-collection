@@ -400,6 +400,11 @@ export class BasketballGame extends GameBase {
     if (!this.isDragging) {
       this.updateBall(dt);
     }
+    // Always decrement score message timer, even while dragging
+    if (this.scoreMessageTimer > 0) {
+      this.scoreMessageTimer -= dt;
+      if (this.scoreMessageTimer < 0) this.scoreMessageTimer = 0;
+    }
     this.render();
     this.animationFrameId = requestAnimationFrame(this.gameLoop);
   };
@@ -591,11 +596,6 @@ export class BasketballGame extends GameBase {
       this.scoreMessageTimer = 2.0; // show for 2 seconds
     }
     this.wasInGoalArea = inGoalArea;
-    // Decrement score message timer
-    if (this.scoreMessageTimer > 0) {
-      this.scoreMessageTimer -= dt;
-      if (this.scoreMessageTimer < 0) this.scoreMessageTimer = 0;
-    }
   }
 
   private preventGesture = (e: Event) => {
