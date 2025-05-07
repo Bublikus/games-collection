@@ -16,6 +16,8 @@ import {
 } from './helpers'
 
 export class BasketballGame extends GameBase {
+  private DEBUG = false
+
   private ball = {
     pos: { x: 0.7, y: 0.8 },
     vel: { x: 0, y: 0 },
@@ -85,7 +87,6 @@ export class BasketballGame extends GameBase {
   private lastTimestamp: number | null = null
   private isDragging = false
   private dragStart: { x: number; y: number; time: number } | null = null
-  private DEBUG = false
   private scoreMessageTimer: number = 0
   private wasInGoalArea: boolean = false
   private isPlaying = false
@@ -142,15 +143,9 @@ export class BasketballGame extends GameBase {
     this.ctx.clearRect(0, 0, logicalWidth, logicalHeight)
 
     // Draw field (cover, centered or shifted by aspect)
-    let originX = 0.5
+    let originX = 0.2
     let originY = 0.5
-    if (logicalWidth < logicalHeight) {
-      // Mobile/portrait: shift horizontally (show left side)
-      originX = 0.2
-    } else if (logicalWidth > logicalHeight * 1.2) {
-      // Wide/landscape: shift vertically (show top)
-      originY = 0.5
-    }
+    
     const fieldRect = drawImageContained(
       this.ctx,
       this.images.field,
@@ -267,6 +262,14 @@ export class BasketballGame extends GameBase {
       const rimH = rimBottomY - rimTopY
       this.ctx.fillRect(rimLeftX, rimTopY, rimW, rimH)
       this.ctx.strokeRect(rimLeftX, rimTopY, rimW, rimH)
+      this.ctx.restore()
+
+      // Diagnostic: draw a filled blue rectangle at the top-left of fieldRect and border only in DEBUG mode
+      const inset = 4 // half the line width
+      this.ctx.save()
+      this.ctx.strokeStyle = 'blue'
+      this.ctx.lineWidth = 8
+      this.ctx.strokeRect(inset, inset, logicalWidth - 2 * inset, logicalHeight - 2 * inset)
       this.ctx.restore()
     }
 
@@ -397,12 +400,31 @@ export class BasketballGame extends GameBase {
   }
 
   private setDragStart(e: { clientX: number; clientY: number }) {
-    if (!this.canvas) return
+    if (!this.canvas || !this.ctx || !this.images.field) return
     const { x, y } = getPointerRelativeCoords(e, this.canvas)
-    this.dragStart = { x, y, time: performance.now() }
-    // Place the ball at the drag start
-    this.ball.pos.x = clamp(x, 0, 1)
-    this.ball.pos.y = clamp(y, 0, 1)
+    const pointerX = x * this.canvas.clientWidth
+    const pointerY = y * this.canvas.clientHeight
+    // Calculate fieldRect as in render
+    const logicalWidth = this.canvas.clientWidth
+    const logicalHeight = this.canvas.clientHeight
+    let originX = 0.2
+    let originY = 0.5
+    const fieldRect = drawImageContained(
+      this.ctx,
+      this.images.field,
+      logicalWidth,
+      logicalHeight,
+      'cover',
+      1,
+      0.5,
+      0.5,
+      originX,
+      originY,
+    )
+    this.dragStart = { x: pointerX, y: pointerY, time: performance.now() }
+    // Place the ball at the drag start, mapped to fieldRect
+    this.ball.pos.x = clamp((pointerX - fieldRect.offsetX) / fieldRect.drawW, 0, 1)
+    this.ball.pos.y = clamp((pointerY - fieldRect.offsetY) / fieldRect.drawH, 0, 1)
     this.ball.vel.x = 0
     this.ball.vel.y = 0
   }
@@ -410,11 +432,13 @@ export class BasketballGame extends GameBase {
   private throwBall(e: { clientX: number; clientY: number }) {
     if (!this.canvas || !this.dragStart) return
     const { x, y } = getPointerRelativeCoords(e, this.canvas)
+    const pointerX = x * this.canvas.clientWidth
+    const pointerY = y * this.canvas.clientHeight
     const dt = (performance.now() - this.dragStart.time) / 1000
     if (dt < 0.01) return
     const { vx, vy } = calcVelocity(
       { x: this.dragStart.x, y: this.dragStart.y },
-      { x, y },
+      { x: pointerX, y: pointerY },
       dt,
       this.ball.throwPower,
       this.ball.minThrowSpeed,
@@ -481,38 +505,20 @@ export class BasketballGame extends GameBase {
       this.ball.angularVel = this.ball.vel.x / this.ball.radius
     }
 
-    // Bounce off left wall
-    if (this.ball.pos.x - this.ball.radius < 0) {
-      this.ball.pos.x = this.ball.radius
-      this.ball.vel.x *= -this.physics.wallDamping
-      if (Math.abs(this.ball.vel.x) < 0.1) this.ball.vel.x = 0
-      // Reverse and gently dampen spin on left wall bounce
-      this.ball.angularVel *= -0.95
-    }
-    // Bounce off right wall
-    if (this.ball.pos.x + this.ball.radius > 1) {
-      this.ball.pos.x = 1 - this.ball.radius
-      this.ball.vel.x *= -this.physics.wallDamping
-      if (Math.abs(this.ball.vel.x) < 0.1) this.ball.vel.x = 0
-      // Reverse and gently dampen spin on right wall bounce
-      this.ball.angularVel *= -0.95
-    }
-
     // Basket wall collision (from right side only)
     // Recompute fieldRect and basketRect as in render
     if (!this.canvas || !this.images.basket || !this.images.field) return
-    const logicalWidth = this.canvas.clientWidth
-    const logicalHeight = this.canvas.clientHeight
     const fieldRect = drawImageContained(
       this.ctx!,
       this.images.field,
-      logicalWidth,
-      logicalHeight,
+      this.canvas.clientWidth,
+      this.canvas.clientHeight,
       'cover',
       1,
       0.5,
       0.5,
     )
+    const logicalWidthAfter = this.canvas.clientWidth
     const basketAspect = this.images.basket.naturalHeight / this.images.basket.naturalWidth
     const basketRect = getImageDrawRect({
       containerRect: fieldRect,
@@ -528,6 +534,33 @@ export class BasketballGame extends GameBase {
     let ballXpx = fieldRect.offsetX + fieldRect.drawW * this.ball.pos.x
     let ballYpx = fieldRect.offsetY + fieldRect.drawH * this.ball.pos.y
     const ballRadiusPx = this.ball.radius * fieldRect.drawW
+
+    // Calculate intersection of field image and visible canvas for bounce boundaries
+    const scaleFactor = 1.67;
+    const leftEdge = Math.max(0, fieldRect.offsetX) + fieldRect.offsetX / scaleFactor;
+    const rightEdge = Math.min(this.canvas.clientWidth, fieldRect.offsetX + fieldRect.drawW) + fieldRect.offsetX / scaleFactor;
+
+    // Left edge
+    if (ballXpx - ballRadiusPx < leftEdge) {
+      const newBallXpx = leftEdge + ballRadiusPx
+      this.ball.vel.x *= -this.physics.wallDamping
+      if (Math.abs(this.ball.vel.x) < 0.1) this.ball.vel.x = 0
+      this.ball.angularVel *= -0.95
+      // Convert back to relative
+      this.ball.pos.x = (newBallXpx - fieldRect.offsetX) / fieldRect.drawW
+      ballXpx = newBallXpx
+    }
+    // Right edge
+    if (ballXpx + ballRadiusPx > rightEdge) {
+      const newBallXpx = rightEdge - ballRadiusPx
+      this.ball.vel.x *= -this.physics.wallDamping
+      if (Math.abs(this.ball.vel.x) < 0.1) this.ball.vel.x = 0
+      this.ball.angularVel *= -0.95
+      // Convert back to relative
+      this.ball.pos.x = (newBallXpx - fieldRect.offsetX) / fieldRect.drawW
+      ballXpx = newBallXpx
+    }
+
     // Check overlap for all basket constraints (spherical bounce)
     for (const rect of this.basket.rectConstraints) {
       const { xStart, xEnd, yStart, yEnd } = rect.coords
@@ -628,9 +661,33 @@ export class BasketballGame extends GameBase {
   }
 
   private setBallPositionToPointer(e: { clientX: number; clientY: number }) {
-    if (!this.canvas) return
+    if (!this.canvas || !this.ctx || !this.images.field) return
     const { x, y } = getPointerRelativeCoords(e, this.canvas)
-    this.ball.pos.x = clamp(x, 0, 1)
-    this.ball.pos.y = clamp(y, 0, 1)
+    const pointerX = x * this.canvas.clientWidth
+    const pointerY = y * this.canvas.clientHeight
+    // Calculate fieldRect as in render
+    const logicalWidth = this.canvas.clientWidth
+    const logicalHeight = this.canvas.clientHeight
+    let originX = 0.5
+    let originY = 0.5
+    if (logicalWidth < logicalHeight) {
+      originX = 0.2
+    } else if (logicalWidth > logicalHeight * 1.2) {
+      originY = 0.5
+    }
+    const fieldRect = drawImageContained(
+      this.ctx,
+      this.images.field,
+      logicalWidth,
+      logicalHeight,
+      'cover',
+      1,
+      0.5,
+      0.5,
+      originX,
+      originY,
+    )
+    this.ball.pos.x = clamp((pointerX - fieldRect.offsetX) / fieldRect.drawW, 0, 1)
+    this.ball.pos.y = clamp((pointerY - fieldRect.offsetY) / fieldRect.drawH, 0, 1)
   }
 }
