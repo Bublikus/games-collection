@@ -454,7 +454,7 @@ export class BasketballGame extends GameBase {
     this.pointerHistory = [];
   }
 
-  private throwBall(e: { clientX: number; clientY: number }) {
+  private throwBall() {
     if (!this.canvas || !this.dragStart) return;
     // Use pointer history for velocity
     if (this.pointerHistory.length >= 2) {
