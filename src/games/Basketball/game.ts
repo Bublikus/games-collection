@@ -23,7 +23,7 @@ export class BasketballGame extends GameBase {
     vel: { x: 0, y: 0 },
     radius: 0.035,
     minThrowSpeed: 0.1,
-    maxThrowSpeed: 2.2,
+    maxThrowSpeed: 2.4,
     throwPower: 0.005,
     angle: 0, // current rotation angle in radians
     angularVel: 0, // angular velocity in radians/sec
