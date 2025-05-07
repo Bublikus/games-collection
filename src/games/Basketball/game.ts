@@ -19,9 +19,9 @@ export class BasketballGame extends GameBase {
   private DEBUG = false
 
   private ball = {
-    pos: { x: 0.7, y: 0.8 },
+    pos: { x: 0.75, y: 0.8 },
     vel: { x: 0, y: 0 },
-    target: { x: 0.8, y: 0.5 },
+    target: { x: 0.75, y: 0.5 },
     radius: 0.035,
     minThrowSpeed: 1.5,
     maxThrowSpeed: 2.0,
@@ -111,7 +111,32 @@ export class BasketballGame extends GameBase {
     this.images.basket = images.basket
     this.images.ball = images.ball
     this.images.basketNet = images.basketNet
-    this.ball.pos = { ...this.ball.target }
+    // Calculate fieldRect as in render
+    if (this.ctx && this.images.field && this.canvas) {
+      const logicalWidth = this.canvas.clientWidth
+      const logicalHeight = this.canvas.clientHeight
+      let originX = 0.2
+      let originY = 0.5
+      const fieldRect = drawImageContained(
+        this.ctx,
+        this.images.field,
+        logicalWidth,
+        logicalHeight,
+        'cover',
+        1,
+        0.5,
+        0.5,
+        originX,
+        originY,
+      )
+      // Set ball to 75% of screen width and 50% of screen height in field coordinates
+      const screenX = 0.75 * logicalWidth
+      const screenY = 0.5 * logicalHeight
+      this.ball.pos.x = clamp((screenX - fieldRect.offsetX) / fieldRect.drawW, 0, 1)
+      this.ball.target.x = clamp((screenX - fieldRect.offsetX) / fieldRect.drawW, 0, 1)
+      this.ball.pos.y = clamp((screenY - fieldRect.offsetY) / fieldRect.drawH, 0, 1)
+      this.ball.target.y = clamp((screenY - fieldRect.offsetY) / fieldRect.drawH, 0, 1)
+    }
     this.ball.vel = { x: 0, y: 0 }
     this.lastTimestamp = null
     this.render()
