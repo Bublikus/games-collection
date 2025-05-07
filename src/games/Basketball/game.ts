@@ -22,9 +22,9 @@ export class BasketballGame extends GameBase {
     pos: { x: 0.75, y: 0.8 },
     vel: { x: 0, y: 0 },
     radius: 0.035,
-    minThrowSpeed: 0.5,
+    minThrowSpeed: 0.1,
     maxThrowSpeed: 2.0,
-    throwPower: 2,
+    throwPower: 0.005,
     angle: 0, // current rotation angle in radians
     angularVel: 0, // angular velocity in radians/sec
     spinFriction: 0.995, // gentler friction for spin
