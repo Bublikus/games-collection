@@ -36,21 +36,23 @@ function App() {
 
   return (
     <div className="App">
-      <div className="game-select-container">
-        <label htmlFor="game-select" className="game-select-label">
-          Choose a game:{' '}
-        </label>
-        <select id="game-select" value={selectedGame} onChange={(e) => setSelectedGame(e.target.value)}>
-          {games.map((game) => (
-            <option key={game.name} value={game.name}>
-              {game.name}
-            </option>
-          ))}
-        </select>
-      </div>
-      <button className="play-pause-btn" onClick={() => setPaused((p) => !p)} aria-label={paused ? 'Play' : 'Pause'}>
-        {paused ? '▶️' : '⏸️'}
-      </button>
+      <header className="game-header">
+        <div className="game-select-container">
+          <label htmlFor="game-select" className="game-select-label">
+            Choose a game:{' '}
+          </label>
+          <select id="game-select" value={selectedGame} onChange={(e) => setSelectedGame(e.target.value)}>
+            {games.map((game) => (
+              <option key={game.name} value={game.name}>
+                {game.name}
+              </option>
+            ))}
+          </select>
+        </div>
+        <button className="play-pause-btn" onClick={() => setPaused((p) => !p)} aria-label={paused ? 'Play' : 'Pause'}>
+          {paused ? '▶️' : '⏸️'}
+        </button>
+      </header>
       <div className="game-container">
         {SelectedGameComponent ? (
           <Suspense fallback={<div>Loading game...</div>}>

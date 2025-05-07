@@ -1,3 +1,11 @@
+:root {
+  --game-header-height: 55px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
 body,
 .App {
   position: fixed;
@@ -22,15 +30,29 @@ body,
   justify-content: center;
 }
 
-.game-select-container {
+.game-header {
   position: fixed;
   top: 0;
   left: 0;
+  width: 100%;
+  height: var(--game-header-height);
   z-index: 1000;
+  pointer-events: none;
+}
+
+.game-select-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
   background: rgba(25, 25, 25, 0.95);
-  padding: 12px 16px;
+  padding: 0 16px;
   border-bottom-right-radius: 12px;
+  height: 100%;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  pointer-events: auto;
 }
 
 .game-select-label {
@@ -38,7 +60,7 @@ body,
 }
 
 .play-pause-btn {
-  position: fixed;
+  position: absolute;
   top: 0;
   right: 0;
   z-index: 1000;
@@ -47,8 +69,9 @@ body,
   border: none !important;
   font-size: 22px;
   padding: 0 24px;
-  height: 57px;
+  height: 100%;
   background: rgba(25, 25, 25, 0.95);
+  pointer-events: auto;
 }
 
 /* Style the select and label for dark mode */
