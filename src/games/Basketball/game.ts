@@ -518,7 +518,6 @@ export class BasketballGame extends GameBase {
       0.5,
       0.5,
     )
-    const logicalWidthAfter = this.canvas.clientWidth
     const basketAspect = this.images.basket.naturalHeight / this.images.basket.naturalWidth
     const basketRect = getImageDrawRect({
       containerRect: fieldRect,
