@@ -92,6 +92,8 @@ export class BasketballGame extends GameBase {
   private scoreMessageTimer: number = 0
   private wasInGoalArea: boolean = false
   private isPlaying = false
+  private lastClientWidth: number | null = null
+  private lastClientHeight: number | null = null
 
   async init(canvas: HTMLCanvasElement) {
     this.canvas = canvas
@@ -102,6 +104,8 @@ export class BasketballGame extends GameBase {
       this.ctx.setTransform(1, 0, 0, 1, 0, 0) // Reset any existing transforms
       this.ctx.scale(this.dpr, this.dpr)
     }
+    this.lastClientWidth = this.canvas ? this.canvas.clientWidth : null;
+    this.lastClientHeight = this.canvas ? this.canvas.clientHeight : null;
     // Use GameBase's loadImages utility for generic image loading
     const images = await this.loadImages({
       field: fieldImgUrl,
@@ -161,6 +165,14 @@ export class BasketballGame extends GameBase {
       !this.canvas
     )
       return
+    // Responsive: auto-resize canvas if CSS size changed
+    const clientWidth = this.canvas.clientWidth;
+    const clientHeight = this.canvas.clientHeight;
+    if (clientWidth !== this.lastClientWidth || clientHeight !== this.lastClientHeight) {
+      this.resize(clientWidth, clientHeight);
+      this.lastClientWidth = clientWidth;
+      this.lastClientHeight = clientHeight;
+    }
     const logicalWidth = this.canvas.clientWidth
     const logicalHeight = this.canvas.clientHeight
     this.ctx.clearRect(0, 0, logicalWidth, logicalHeight)
@@ -483,6 +495,16 @@ export class BasketballGame extends GameBase {
   }
 
   private gameLoop = (timestamp: number) => {
+    // Responsive: auto-resize canvas if CSS size changed
+    if (this.canvas) {
+      const clientWidth = this.canvas.clientWidth;
+      const clientHeight = this.canvas.clientHeight;
+      if (clientWidth !== this.lastClientWidth || clientHeight !== this.lastClientHeight) {
+        this.resize(clientWidth, clientHeight);
+        this.lastClientWidth = clientWidth;
+        this.lastClientHeight = clientHeight;
+      }
+    }
     if (!this.lastTimestamp) this.lastTimestamp = timestamp
     const dt = Math.min((timestamp - this.lastTimestamp) / 1000, 0.05) // seconds, clamp to avoid big jumps
     this.lastTimestamp = timestamp
@@ -733,6 +755,5 @@ export class BasketballGame extends GameBase {
     this.canvas.height = height * this.dpr
     this.ctx.setTransform(1, 0, 0, 1, 0, 0)
     this.ctx.scale(this.dpr, this.dpr)
-    this.render()
   }
 }
