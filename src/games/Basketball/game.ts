@@ -23,7 +23,7 @@ export class BasketballGame extends GameBase {
     vel: { x: 0, y: 0 },
     radius: 0.035,
     minThrowSpeed: 0.1,
-    maxThrowSpeed: 2.3,
+    maxThrowSpeed: 2.3, // will be set dynamically
     throwPower: 0.005,
     angle: 0, // current rotation angle in radians
     angularVel: 0, // angular velocity in radians/sec
@@ -108,6 +108,7 @@ export class BasketballGame extends GameBase {
     }
     this.lastClientWidth = this.canvas ? this.canvas.clientWidth : null;
     this.lastClientHeight = this.canvas ? this.canvas.clientHeight : null;
+    this.updateMaxThrowSpeed();
     // Use GameBase's loadImages utility for generic image loading
     const images = await this.loadImages({
       field: fieldImgUrl,
@@ -770,5 +771,11 @@ export class BasketballGame extends GameBase {
     this.canvas.height = height * this.dpr
     this.ctx.setTransform(1, 0, 0, 1, 0, 0)
     this.ctx.scale(this.dpr, this.dpr)
+    this.updateMaxThrowSpeed();
+  }
+
+  private updateMaxThrowSpeed() {
+    if (!this.canvas) return;
+    this.ball.maxThrowSpeed = this.canvas.clientWidth < 786 ? 2.3 : 2.0;
   }
 }
