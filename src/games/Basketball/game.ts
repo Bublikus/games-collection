@@ -395,7 +395,7 @@ export class BasketballGame extends GameBase {
 
   private handlePointerUp = (e: PointerEvent) => {
     if (this.isDragging) {
-      this.throwBall(e)
+      this.throwBall()
     }
     this.isDragging = false
   }
@@ -417,7 +417,7 @@ export class BasketballGame extends GameBase {
 
   private handleTouchEnd = (e: TouchEvent) => {
     if (this.isDragging && e.changedTouches.length > 0) {
-      this.throwBall(e.changedTouches[0])
+      this.throwBall()
     }
     this.isDragging = false
   }
