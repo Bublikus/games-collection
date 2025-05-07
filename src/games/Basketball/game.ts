@@ -22,7 +22,7 @@ export class BasketballGame extends GameBase {
     pos: { x: 0.75, y: 0.8 },
     vel: { x: 0, y: 0 },
     radius: 0.035,
-    minThrowSpeed: 1.5,
+    minThrowSpeed: 0.5,
     maxThrowSpeed: 2.0,
     throwPower: 2,
     angle: 0, // current rotation angle in radians
@@ -59,6 +59,8 @@ export class BasketballGame extends GameBase {
 
   private field = {
     groundY: 0.8,
+    originX: 0.2,
+    originY: 0.5,
   }
 
   private physics = {
@@ -86,7 +88,7 @@ export class BasketballGame extends GameBase {
   private lastTimestamp: number | null = null
   private isDragging = false
   private dragStart: { x: number; y: number; time: number } | null = null
-  private pointerHistory: { x: number; y: number; time: number }[] = [];
+  private pointerHistory: { x: number; y: number; time: number }[] = []
   private scoreMessageTimer: number = 0
   private wasInGoalArea: boolean = false
   private isPlaying = false
@@ -115,8 +117,6 @@ export class BasketballGame extends GameBase {
     if (this.ctx && this.images.field && this.canvas) {
       const logicalWidth = this.canvas.clientWidth
       const logicalHeight = this.canvas.clientHeight
-      let originX = 0.2
-      let originY = 0.5
       const fieldRect = drawImageContained(
         this.ctx,
         this.images.field,
@@ -126,8 +126,8 @@ export class BasketballGame extends GameBase {
         1,
         0.5,
         0.5,
-        originX,
-        originY,
+        this.field.originX,
+        this.field.originY,
       )
       // Set ball to 75% of screen width and 50% of screen height in field coordinates
       const screenX = 0.75 * logicalWidth
@@ -166,9 +166,6 @@ export class BasketballGame extends GameBase {
     this.ctx.clearRect(0, 0, logicalWidth, logicalHeight)
 
     // Draw field (cover, centered or shifted by aspect)
-    let originX = 0.2
-    let originY = 0.5
-    
     const fieldRect = drawImageContained(
       this.ctx,
       this.images.field,
@@ -178,8 +175,8 @@ export class BasketballGame extends GameBase {
       1,
       0.5,
       0.5,
-      originX,
-      originY,
+      this.field.originX,
+      this.field.originY,
     )
 
     // Draw basket (scale, anchored by bottom-left at 5% x, 78% y of field area)
@@ -430,8 +427,6 @@ export class BasketballGame extends GameBase {
     // Calculate fieldRect as in render
     const logicalWidth = this.canvas.clientWidth
     const logicalHeight = this.canvas.clientHeight
-    let originX = 0.2
-    let originY = 0.5
     const fieldRect = drawImageContained(
       this.ctx,
       this.images.field,
@@ -441,8 +436,8 @@ export class BasketballGame extends GameBase {
       1,
       0.5,
       0.5,
-      originX,
-      originY,
+      this.field.originX,
+      this.field.originY,
     )
     this.dragStart = { x: pointerX, y: pointerY, time: performance.now() }
     // Place the ball at the drag start, mapped to fieldRect
@@ -451,23 +446,23 @@ export class BasketballGame extends GameBase {
     this.ball.vel.x = 0
     this.ball.vel.y = 0
     // Clear pointer history
-    this.pointerHistory = [];
+    this.pointerHistory = []
   }
 
   private throwBall() {
-    if (!this.canvas || !this.dragStart) return;
+    if (!this.canvas || !this.dragStart) return
     // Use pointer history for velocity
     if (this.pointerHistory.length >= 2) {
-      const last = this.pointerHistory[this.pointerHistory.length - 1];
+      const last = this.pointerHistory[this.pointerHistory.length - 1]
       // Find a sample 50-100ms before the last one
-      let prev = this.pointerHistory[0];
+      let prev = this.pointerHistory[0]
       for (let i = this.pointerHistory.length - 2; i >= 0; i--) {
         if (last.time - this.pointerHistory[i].time > 50) {
-          prev = this.pointerHistory[i];
-          break;
+          prev = this.pointerHistory[i]
+          break
         }
       }
-      const dt = (last.time - prev.time) / 1000;
+      const dt = (last.time - prev.time) / 1000
       if (dt > 0) {
         // Use your existing calcVelocity logic, but with dx, dy, dt
         const { vx, vy } = calcVelocity(
@@ -477,14 +472,14 @@ export class BasketballGame extends GameBase {
           this.ball.throwPower,
           this.ball.minThrowSpeed,
           this.ball.maxThrowSpeed,
-        );
-        this.ball.vel.x = vx;
-        this.ball.vel.y = vy;
-        this.ball.angularVel = vx / this.ball.radius;
+        )
+        this.ball.vel.x = vx
+        this.ball.vel.y = vy
+        this.ball.angularVel = vx / this.ball.radius
       }
     }
-    this.dragStart = null;
-    this.pointerHistory = [];
+    this.dragStart = null
+    this.pointerHistory = []
   }
 
   private gameLoop = (timestamp: number) => {
@@ -553,6 +548,8 @@ export class BasketballGame extends GameBase {
       1,
       0.5,
       0.5,
+      this.field.originX,
+      this.field.originY,
     )
     const basketAspect = this.images.basket.naturalHeight / this.images.basket.naturalWidth
     const basketRect = getImageDrawRect({
@@ -571,9 +568,10 @@ export class BasketballGame extends GameBase {
     const ballRadiusPx = this.ball.radius * fieldRect.drawW
 
     // Calculate intersection of field image and visible canvas for bounce boundaries
-    const scaleFactor = 1.67;
-    const leftEdge = Math.max(0, fieldRect.offsetX) + fieldRect.offsetX / scaleFactor;
-    const rightEdge = Math.min(this.canvas.clientWidth, fieldRect.offsetX + fieldRect.drawW) + fieldRect.offsetX / scaleFactor;
+    const scaleFactor = fieldRect.drawW * this.field.originX
+    const leftEdge = Math.max(0, fieldRect.offsetX) + fieldRect.offsetX / scaleFactor
+    const rightEdge =
+      Math.min(this.canvas.clientWidth, fieldRect.offsetX + fieldRect.drawW) + fieldRect.offsetX / scaleFactor
 
     // Left edge
     if (ballXpx - ballRadiusPx < leftEdge) {
@@ -703,13 +701,6 @@ export class BasketballGame extends GameBase {
     // Calculate fieldRect as in render
     const logicalWidth = this.canvas.clientWidth
     const logicalHeight = this.canvas.clientHeight
-    let originX = 0.5
-    let originY = 0.5
-    if (logicalWidth < logicalHeight) {
-      originX = 0.2
-    } else if (logicalWidth > logicalHeight * 1.2) {
-      originY = 0.5
-    }
     const fieldRect = drawImageContained(
       this.ctx,
       this.images.field,
@@ -719,20 +710,20 @@ export class BasketballGame extends GameBase {
       1,
       0.5,
       0.5,
-      originX,
-      originY,
+      this.field.originX,
+      this.field.originY,
     )
     this.ball.pos.x = clamp((pointerX - fieldRect.offsetX) / fieldRect.drawW, 0, 1)
     this.ball.pos.y = clamp((pointerY - fieldRect.offsetY) / fieldRect.drawH, 0, 1)
     // Add to pointer history
-    const now = performance.now();
-    this.pointerHistory.push({ x: pointerX, y: pointerY, time: now });
+    const now = performance.now()
+    this.pointerHistory.push({ x: pointerX, y: pointerY, time: now })
     // Keep only the last 15 samples or last 200ms
     while (
       this.pointerHistory.length > 15 ||
       (this.pointerHistory.length > 1 && now - this.pointerHistory[0].time > 200)
     ) {
-      this.pointerHistory.shift();
+      this.pointerHistory.shift()
     }
   }
 
