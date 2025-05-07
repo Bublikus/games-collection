@@ -61,6 +61,7 @@ export class BasketballGame extends GameBase {
     groundY: 0.8,
     originX: 0.2,
     originY: 0.5,
+    groundDamping: 0.9,
   }
 
   private physics = {
@@ -94,6 +95,7 @@ export class BasketballGame extends GameBase {
   private isPlaying = false
   private lastClientWidth: number | null = null
   private lastClientHeight: number | null = null
+  private justBouncedFromConstraint = false;
 
   async init(canvas: HTMLCanvasElement) {
     this.canvas = canvas
@@ -488,6 +490,17 @@ export class BasketballGame extends GameBase {
         this.ball.vel.x = vx
         this.ball.vel.y = vy
         this.ball.angularVel = vx / this.ball.radius
+        // If the ball is below the ground line, add extra upward velocity
+        const groundY = this.field.groundY;
+        if (this.ball.pos.y + this.ball.radius > groundY) {
+          const below = (this.ball.pos.y + this.ball.radius) - groundY;
+          // Tune the multiplier as needed for desired effect
+          const bounceBoost = below * 5; // 5 is an example, adjust as needed
+          this.ball.vel.y += bounceBoost;
+          // Clamp the ball to just above the ground
+          this.ball.pos.y = groundY - this.ball.radius;
+          this.justBouncedFromConstraint = true;
+        }
       }
     }
     this.dragStart = null
@@ -540,9 +553,11 @@ export class BasketballGame extends GameBase {
 
     // Bounce off ground
     const ballBottom = this.ball.pos.y + this.ball.radius
-    if (ballBottom > this.field.groundY) {
+    if (this.justBouncedFromConstraint) {
+      this.justBouncedFromConstraint = false;
+    } else if (ballBottom > this.field.groundY) {
       this.ball.pos.y = this.field.groundY - this.ball.radius
-      this.ball.vel.y *= -this.physics.bounceDamping // lose some energy on bounce
+      this.ball.vel.y *= -this.field.groundDamping // use custom ground damping
       if (Math.abs(this.ball.vel.y) < 0.1) {
         this.ball.vel.y = 0
       }
