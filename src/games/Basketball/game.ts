@@ -21,7 +21,6 @@ export class BasketballGame extends GameBase {
   private ball = {
     pos: { x: 0.75, y: 0.8 },
     vel: { x: 0, y: 0 },
-    target: { x: 0.75, y: 0.5 },
     radius: 0.035,
     minThrowSpeed: 1.5,
     maxThrowSpeed: 2.0,
@@ -87,6 +86,7 @@ export class BasketballGame extends GameBase {
   private lastTimestamp: number | null = null
   private isDragging = false
   private dragStart: { x: number; y: number; time: number } | null = null
+  private pointerHistory: { x: number; y: number; time: number }[] = [];
   private scoreMessageTimer: number = 0
   private wasInGoalArea: boolean = false
   private isPlaying = false
@@ -133,9 +133,7 @@ export class BasketballGame extends GameBase {
       const screenX = 0.75 * logicalWidth
       const screenY = 0.5 * logicalHeight
       this.ball.pos.x = clamp((screenX - fieldRect.offsetX) / fieldRect.drawW, 0, 1)
-      this.ball.target.x = clamp((screenX - fieldRect.offsetX) / fieldRect.drawW, 0, 1)
       this.ball.pos.y = clamp((screenY - fieldRect.offsetY) / fieldRect.drawH, 0, 1)
-      this.ball.target.y = clamp((screenY - fieldRect.offsetY) / fieldRect.drawH, 0, 1)
     }
     this.ball.vel = { x: 0, y: 0 }
     this.lastTimestamp = null
@@ -452,28 +450,41 @@ export class BasketballGame extends GameBase {
     this.ball.pos.y = clamp((pointerY - fieldRect.offsetY) / fieldRect.drawH, 0, 1)
     this.ball.vel.x = 0
     this.ball.vel.y = 0
+    // Clear pointer history
+    this.pointerHistory = [];
   }
 
   private throwBall(e: { clientX: number; clientY: number }) {
-    if (!this.canvas || !this.dragStart) return
-    const { x, y } = getPointerRelativeCoords(e, this.canvas)
-    const pointerX = x * this.canvas.clientWidth
-    const pointerY = y * this.canvas.clientHeight
-    const dt = (performance.now() - this.dragStart.time) / 1000
-    if (dt < 0.01) return
-    const { vx, vy } = calcVelocity(
-      { x: this.dragStart.x, y: this.dragStart.y },
-      { x: pointerX, y: pointerY },
-      dt,
-      this.ball.throwPower,
-      this.ball.minThrowSpeed,
-      this.ball.maxThrowSpeed,
-    )
-    this.ball.vel.x = vx
-    this.ball.vel.y = vy
-    // Set initial spin to match movement direction (rolling in air)
-    this.ball.angularVel = vx / this.ball.radius
-    this.dragStart = null
+    if (!this.canvas || !this.dragStart) return;
+    // Use pointer history for velocity
+    if (this.pointerHistory.length >= 2) {
+      const last = this.pointerHistory[this.pointerHistory.length - 1];
+      // Find a sample 50-100ms before the last one
+      let prev = this.pointerHistory[0];
+      for (let i = this.pointerHistory.length - 2; i >= 0; i--) {
+        if (last.time - this.pointerHistory[i].time > 50) {
+          prev = this.pointerHistory[i];
+          break;
+        }
+      }
+      const dt = (last.time - prev.time) / 1000;
+      if (dt > 0) {
+        // Use your existing calcVelocity logic, but with dx, dy, dt
+        const { vx, vy } = calcVelocity(
+          { x: prev.x, y: prev.y },
+          { x: last.x, y: last.y },
+          dt,
+          this.ball.throwPower,
+          this.ball.minThrowSpeed,
+          this.ball.maxThrowSpeed,
+        );
+        this.ball.vel.x = vx;
+        this.ball.vel.y = vy;
+        this.ball.angularVel = vx / this.ball.radius;
+      }
+    }
+    this.dragStart = null;
+    this.pointerHistory = [];
   }
 
   private gameLoop = (timestamp: number) => {
@@ -713,6 +724,16 @@ export class BasketballGame extends GameBase {
     )
     this.ball.pos.x = clamp((pointerX - fieldRect.offsetX) / fieldRect.drawW, 0, 1)
     this.ball.pos.y = clamp((pointerY - fieldRect.offsetY) / fieldRect.drawH, 0, 1)
+    // Add to pointer history
+    const now = performance.now();
+    this.pointerHistory.push({ x: pointerX, y: pointerY, time: now });
+    // Keep only the last 15 samples or last 200ms
+    while (
+      this.pointerHistory.length > 15 ||
+      (this.pointerHistory.length > 1 && now - this.pointerHistory[0].time > 200)
+    ) {
+      this.pointerHistory.shift();
+    }
   }
 
   public resize(width: number, height: number) {
