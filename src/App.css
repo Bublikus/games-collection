@@ -46,6 +46,9 @@ body,
   outline: none !important;
   border: none !important;
   font-size: 22px;
+  padding: 0 24px;
+  height: 57px;
+  background: rgba(25, 25, 25, 0.95);
 }
 
 /* Style the select and label for dark mode */

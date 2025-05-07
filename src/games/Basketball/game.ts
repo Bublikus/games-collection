@@ -23,7 +23,7 @@ export class BasketballGame extends GameBase {
     vel: { x: 0, y: 0 },
     radius: 0.035,
     minThrowSpeed: 0.1,
-    maxThrowSpeed: 2.0,
+    maxThrowSpeed: 2.2,
     throwPower: 0.005,
     angle: 0, // current rotation angle in radians
     angularVel: 0, // angular velocity in radians/sec
@@ -495,7 +495,7 @@ export class BasketballGame extends GameBase {
         if (this.ball.pos.y + this.ball.radius > groundY) {
           const below = (this.ball.pos.y + this.ball.radius) - groundY;
           // Tune the multiplier as needed for desired effect
-          const bounceBoost = below * 5; // 5 is an example, adjust as needed
+          const bounceBoost = below * 5;
           this.ball.vel.y += bounceBoost;
           // Clamp the ball to just above the ground
           this.ball.pos.y = groundY - this.ball.radius;
