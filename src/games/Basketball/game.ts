@@ -782,8 +782,9 @@ export class BasketballGame extends GameBase {
     maxThrowSpeedElement.textContent = `maxThrowSpeed: ${this.ball.maxThrowSpeed}`;
     // styles to bottom left position
     maxThrowSpeedElement.style.position = 'absolute';
-    maxThrowSpeedElement.style.bottom = '10px';
+    maxThrowSpeedElement.style.bottom = '50%';
     maxThrowSpeedElement.style.left = '10px';
+    maxThrowSpeedElement.style.zIndex = '1000';
     document.body.appendChild(maxThrowSpeedElement);
   }
 }
