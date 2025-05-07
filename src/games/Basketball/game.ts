@@ -393,7 +393,7 @@ export class BasketballGame extends GameBase {
     }
   }
 
-  private handlePointerUp = (e: PointerEvent) => {
+  private handlePointerUp = () => {
     if (this.isDragging) {
       this.throwBall()
     }
