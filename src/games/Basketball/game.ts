@@ -689,4 +689,13 @@ export class BasketballGame extends GameBase {
     this.ball.pos.x = clamp((pointerX - fieldRect.offsetX) / fieldRect.drawW, 0, 1)
     this.ball.pos.y = clamp((pointerY - fieldRect.offsetY) / fieldRect.drawH, 0, 1)
   }
+
+  public resize(width: number, height: number) {
+    if (!this.canvas || !this.ctx) return
+    this.canvas.width = width * this.dpr
+    this.canvas.height = height * this.dpr
+    this.ctx.setTransform(1, 0, 0, 1, 0, 0)
+    this.ctx.scale(this.dpr, this.dpr)
+    this.render()
+  }
 }

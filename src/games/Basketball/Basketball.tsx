@@ -10,13 +10,25 @@ function useBasketballGame(
 
   useEffect(() => {
     if (!canvasRef.current) return
-    const game = new BasketballGame()
-    gameRef.current = game
-    canvasRef.current.width = width
-    canvasRef.current.height = height
-    game.init(canvasRef.current).then(() => game.start())
-    return () => game.destroy()
-  }, [canvasRef, width, height])
+    if (!gameRef.current) {
+      const game = new BasketballGame()
+      gameRef.current = game
+      game.init(canvasRef.current).then(() => game.start())
+    }
+    // No destroy here
+    // Only create/destroy on mount/unmount
+    return () => {
+      gameRef.current?.destroy()
+      gameRef.current = null
+    }
+  }, [canvasRef])
+
+  useEffect(() => {
+    // On width/height change, just resize
+    if (gameRef.current && canvasRef.current) {
+      gameRef.current.resize(width, height)
+    }
+  }, [width, height, canvasRef])
 
   useEffect(() => {
     if (isPlaying) {
