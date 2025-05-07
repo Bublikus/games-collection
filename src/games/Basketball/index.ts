@@ -1,3 +1,3 @@
-import { Basketball } from './Basketball';
+import { Basketball } from './Basketball'
 
-export default Basketball;
+export default Basketball

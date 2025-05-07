@@ -1,11 +1,11 @@
 import React, { useState, useEffect, Suspense, lazy } from 'react'
-import { GameProps } from './types';
+import { GameProps } from './types'
 import './App.css'
 
 // Type for game metadata
 interface GameMeta {
-  name: string;
-  component: React.LazyExoticComponent<(props: GameProps) => React.ReactElement>;
+  name: string
+  component: React.LazyExoticComponent<(props: GameProps) => React.ReactElement>
 }
 
 function App() {
@@ -32,27 +32,23 @@ function App() {
     }
   }, [])
 
-  const SelectedGameComponent = games.find(g => g.name === selectedGame)?.component
+  const SelectedGameComponent = games.find((g) => g.name === selectedGame)?.component
 
   return (
     <div className="App">
       <div className="game-select-container">
-        <label htmlFor="game-select" className="game-select-label">Choose a game: </label>
-        <select
-          id="game-select"
-          value={selectedGame}
-          onChange={e => setSelectedGame(e.target.value)}
-        >
-          {games.map(game => (
-            <option key={game.name} value={game.name}>{game.name}</option>
+        <label htmlFor="game-select" className="game-select-label">
+          Choose a game:{' '}
+        </label>
+        <select id="game-select" value={selectedGame} onChange={(e) => setSelectedGame(e.target.value)}>
+          {games.map((game) => (
+            <option key={game.name} value={game.name}>
+              {game.name}
+            </option>
           ))}
         </select>
       </div>
-      <button
-        className="play-pause-btn"
-        onClick={() => setPaused(p => !p)}
-        aria-label={paused ? 'Play' : 'Pause'}
-      >
+      <button className="play-pause-btn" onClick={() => setPaused((p) => !p)} aria-label={paused ? 'Play' : 'Pause'}>
         {paused ? '▶️' : '⏸️'}
       </button>
       <div className="game-container">

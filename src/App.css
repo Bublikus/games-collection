@@ -1,4 +1,5 @@
-body, .App {
+body,
+.App {
   position: fixed;
   top: 0;
   left: 0;
@@ -26,10 +27,10 @@ body, .App {
   top: 0;
   left: 0;
   z-index: 1000;
-  background: rgba(25,25,25,0.95);
+  background: rgba(25, 25, 25, 0.95);
   padding: 12px 16px;
   border-bottom-right-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
 .game-select-label {
@@ -48,7 +49,8 @@ body, .App {
 }
 
 /* Style the select and label for dark mode */
-#game-select, label[for="game-select"] {
+#game-select,
+label[for='game-select'] {
   background: #23272e;
   color: #f3f3f3;
   border: 1px solid #333;
@@ -62,13 +64,13 @@ body, .App {
 }
 
 /* Style the fixed select container */
-.App > div[style*="fixed"] {
+.App > div[style*='fixed'] {
   background: #23272e !important;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.25) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25) !important;
 }
 
 /* Placeholder game styling for dark mode */
-[class^="GamePlaceholder"] {
+[class^='GamePlaceholder'] {
   background: #23272e;
   color: #f3f3f3;
   border: 2px dashed #4e8cff;

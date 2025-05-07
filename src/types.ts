@@ -1,3 +1,3 @@
 export interface GameProps {
-  isPlaying?: boolean;
+  isPlaying?: boolean
 }
