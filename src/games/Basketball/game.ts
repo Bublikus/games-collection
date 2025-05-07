@@ -777,5 +777,13 @@ export class BasketballGame extends GameBase {
   private updateMaxThrowSpeed() {
     if (!this.canvas) return;
     this.ball.maxThrowSpeed = this.canvas.clientWidth < 786 ? 2.3 : 2.0;
+    // render this.ball.maxThrowSpeed number in the document body
+    const maxThrowSpeedElement = document.createElement('div');
+    maxThrowSpeedElement.textContent = `maxThrowSpeed: ${this.ball.maxThrowSpeed}`;
+    // styles to bottom left position
+    maxThrowSpeedElement.style.position = 'absolute';
+    maxThrowSpeedElement.style.bottom = '10px';
+    maxThrowSpeedElement.style.left = '10px';
+    document.body.appendChild(maxThrowSpeedElement);
   }
 }
