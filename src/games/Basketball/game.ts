@@ -321,8 +321,8 @@ export class BasketballGame extends GameBase {
       const t = clamp((totalDuration - this.scoreMessageTimer) / appearDuration, 0, 1)
       const ease = easeOutQuad(t)
 
-      const baseY = logicalHeight * 0.05
-      const startY = baseY + logicalHeight * 0.05 // start lower
+      const baseY = logicalHeight * 0.12
+      const startY = baseY + logicalHeight * 0.12 // start lower
       const y = lerp(startY, baseY, ease)
 
       // Optional: fade in/out

@@ -1,6 +1,7 @@
 import { GameBase } from '../../GameBase'
 import fieldImgUrl from './assets/field.png'
 import ballImgUrl from './assets/ball.png'
+import netImgUrl from './assets/net.png'
 import {
   drawImageContained,
   getImageDrawRect,
@@ -52,9 +53,11 @@ export class FootballGame extends GameBase {
   private images: {
     field: HTMLImageElement | null
     ball: HTMLImageElement | null
+    net: HTMLImageElement | null
   } = {
     field: null,
     ball: null,
+    net: null,
   }
 
   private ctx: CanvasRenderingContext2D | null = null
@@ -101,7 +104,7 @@ export class FootballGame extends GameBase {
     topBar: {
       // Returns a rectangle for the top bar (goalpost)
       getRect: (goalRect: { x: number; y: number; w: number; h: number }) => {
-        const barThickness = Math.max(goalRect.h * 0.075, 8) // 9% of goal height or at least 8px
+        const barThickness = Math.max(goalRect.h * 0.06, 8) // 9% of goal height or at least 8px
         const netLine = this.constraints.net.getSlantedLine(goalRect)
         const x1 = netLine.x1
         const y1 = netLine.y1
@@ -139,9 +142,11 @@ export class FootballGame extends GameBase {
     const images = await this.loadImages({
       field: fieldImgUrl,
       ball: ballImgUrl,
+      net: netImgUrl,
     })
     this.images.field = images.field
     this.images.ball = images.ball
+    this.images.net = images.net
     // Set ball to 75% of screen width and 50% of screen height in field coordinates
     if (this.ctx && this.images.field && this.canvas) {
       const logicalWidth = this.canvas.clientWidth
@@ -179,7 +184,7 @@ export class FootballGame extends GameBase {
   }
 
   private render() {
-    if (!this.ctx || !this.images.field || !this.images.ball || !this.canvas) return
+    if (!this.ctx || !this.images.field || !this.images.ball || !this.images.net || !this.canvas) return
     const clientWidth = this.canvas.clientWidth
     const clientHeight = this.canvas.clientHeight
     if (clientWidth !== this.lastClientWidth || clientHeight !== this.lastClientHeight) {
@@ -275,6 +280,32 @@ export class FootballGame extends GameBase {
     )
     this.ctx.restore()
 
+    // Draw the net image over the goal area (after the ball, so it overlaps)
+    if (this.images.net) {
+      // Calculate the fieldRect as used for the field image
+      // (already calculated above as fieldRect)
+      // The net should be positioned relative to the field image, not just the logical goalRect
+      // We'll use the same proportions as the goal area, but scale/position relative to fieldRect
+      const netAspect = this.images.net.naturalHeight / this.images.net.naturalWidth
+      // Calculate net width and height in fieldRect coordinates
+      const netW = fieldRect.drawW * this.goal.relW * this.goal.scale * 2.42
+      const netH = netW * netAspect
+      // Position net so its top right matches the goal's top right in fieldRect, then shift left and up
+      const netX = fieldRect.offsetX + fieldRect.drawW * (this.goal.relX + this.goal.relW) - netW - netW * 0.4
+      const netY = fieldRect.offsetY + fieldRect.drawH * (this.goal.relY - this.goal.relH / 2) - netH * 0.215
+      this.ctx.drawImage(
+        this.images.net,
+        0,
+        0,
+        this.images.net.naturalWidth,
+        this.images.net.naturalHeight,
+        netX,
+        netY,
+        netW,
+        netH
+      )
+    }
+
     // Draw score message if timer is active
     if (this.scoreMessageTimer > 0 && this.ctx) {
       this.ctx.save()
@@ -283,8 +314,8 @@ export class FootballGame extends GameBase {
       const totalDuration = 2.0
       const t = clamp((totalDuration - this.scoreMessageTimer) / appearDuration, 0, 1)
       const ease = easeOutQuad(t)
-      const baseY = logicalHeight * 0.05
-      const startY = baseY + logicalHeight * 0.05
+      const baseY = logicalHeight * 0.12
+      const startY = baseY + logicalHeight * 0.12
       const y = lerp(startY, baseY, ease)
       let alpha = 1
       if (this.scoreMessageTimer > totalDuration - appearDuration) {
@@ -346,6 +377,7 @@ export class FootballGame extends GameBase {
     this.ctx = null
     this.images.field = null
     this.images.ball = null
+    this.images.net = null
     this.canvas = null
   }
 
