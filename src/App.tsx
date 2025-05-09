@@ -25,6 +25,10 @@ function App() {
         name,
         component: lazy(loader as () => Promise<{ default: (props: GameProps) => React.ReactElement }>),
       }
+    }).sort((a, b) => {
+      if (a.name === 'Football') return -1
+      if (b.name === 'Football') return 1
+      return a.name.localeCompare(b.name)
     })
     setGames(gameEntries)
     if (gameEntries.length > 0) {
