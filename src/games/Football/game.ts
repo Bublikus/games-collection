@@ -96,7 +96,7 @@ export class FootballGame extends GameBase {
           }
         }
       },
-      damping: 0.02,
+      damping: 0.03,
     },
     topBar: {
       // Returns a rectangle for the top bar (goalpost)
@@ -121,6 +121,8 @@ export class FootballGame extends GameBase {
       damping: 0.6,
     },
   }
+
+  private friction = 0.9 // Friction coefficient for rolling ball (0.98 = slow stop)
 
   async init(canvas: HTMLCanvasElement) {
     this.canvas = canvas
@@ -498,9 +500,14 @@ export class FootballGame extends GameBase {
       this.ball.angularVel *= -0.95
       this.ball.angularVel += this.ball.vel.x * 2
     }
+    // If the ball is on the ground and moving horizontally, force rolling spin and apply friction
     const onGround = this.ball.pos.y + this.ball.radius >= this.field.groundY - 0.0001
     if (onGround && Math.abs(this.ball.vel.x) > 0.001) {
       this.ball.angularVel = this.ball.vel.x / this.ball.radius
+      // Apply friction to horizontal velocity
+      this.ball.vel.x *= this.friction
+      // Stop completely if very slow
+      if (Math.abs(this.ball.vel.x) < 0.002) this.ball.vel.x = 0
     }
     if (!this.canvas || !this.images.field) return
     const fieldRect = drawImageContained(
