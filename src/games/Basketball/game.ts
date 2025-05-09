@@ -96,6 +96,7 @@ export class BasketballGame extends GameBase {
   private lastClientWidth: number | null = null
   private lastClientHeight: number | null = null
   private justBouncedFromConstraint = false;
+  private friction = 0.98 // Friction coefficient for rolling ball (0.98 = slow stop)
 
   async init(canvas: HTMLCanvasElement) {
     this.canvas = canvas
@@ -568,10 +569,14 @@ export class BasketballGame extends GameBase {
       this.ball.angularVel += this.ball.vel.x * 2
     }
 
-    // If the ball is on the ground and moving horizontally, force rolling spin
+    // If the ball is on the ground and moving horizontally, force rolling spin and apply friction
     const onGround = this.ball.pos.y + this.ball.radius >= this.field.groundY - 0.0001
     if (onGround && Math.abs(this.ball.vel.x) > 0.001) {
       this.ball.angularVel = this.ball.vel.x / this.ball.radius
+      // Apply friction to horizontal velocity
+      this.ball.vel.x *= this.friction
+      // Stop completely if very slow
+      if (Math.abs(this.ball.vel.x) < 0.002) this.ball.vel.x = 0
     }
 
     // Basket wall collision (from right side only)
