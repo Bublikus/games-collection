@@ -572,7 +572,7 @@ export class FootballGame extends GameBase {
     const bx = ballXpx
     const by = ballYpx
     // Project ball center onto the line segment
-    const { t, closestX, closestY, dist } = projectPointOnLineSegment(
+    const { closestX, closestY, dist } = projectPointOnLineSegment(
       bx,
       by,
       netLine.x1,
