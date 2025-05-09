@@ -126,7 +126,7 @@ export class FootballGame extends GameBase {
     },
   }
 
-  private friction = 0.9 // Friction coefficient for rolling ball (0.98 = slow stop)
+  private friction = 0.95 // Friction coefficient for rolling ball (0.98 = slow stop)
 
   async init(canvas: HTMLCanvasElement) {
     this.canvas = canvas
