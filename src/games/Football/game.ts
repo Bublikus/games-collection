@@ -11,6 +11,14 @@ import {
   lerp,
   easeOutQuad,
 } from '../Basketball/helpers'
+import {
+  getSlantedLine,
+  getTopBarRect,
+  projectPointOnLineSegment,
+  reflectVelocity,
+  transformPoint,
+  transformNormal,
+} from './helpers'
 
 export class FootballGame extends GameBase {
   private DEBUG = false
@@ -82,46 +90,17 @@ export class FootballGame extends GameBase {
 
   private constraints = {
     net: {
-      getSlantedLine: (goalRect: { x: number; y: number; w: number; h: number }) => {
-        if (this.netLineAngle !== null) {
-          const angle = this.netLineAngle
-          const x1 = goalRect.x + goalRect.w * this.netLineTopRatio
-          const y1 = goalRect.y
-          const y2 = goalRect.y + goalRect.h
-          const x2 = x1 - goalRect.h / Math.tan(angle)
-          return { x1, y1, x2, y2 }
-        } else {
-          return {
-            x1: goalRect.x + goalRect.w * this.netLineTopRatio,
-            y1: goalRect.y,
-            x2: goalRect.x + goalRect.w * this.netLineBottomRatio,
-            y2: goalRect.y + goalRect.h,
-          }
-        }
-      },
+      getSlantedLine: (goalRect: { x: number; y: number; w: number; h: number }) =>
+        getSlantedLine(goalRect, this.netLineTopRatio, this.netLineBottomRatio, this.netLineAngle),
       dampingLeft: 0.5, // Ball hits from left
       dampingRight: 0.03, // Ball hits from right
     },
     topBar: {
-      // Returns a rectangle for the top bar (goalpost)
-      getRect: (goalRect: { x: number; y: number; w: number; h: number }) => {
-        const barThickness = Math.max(goalRect.h * 0.06, 8) // 9% of goal height or at least 8px
-        const netLine = this.constraints.net.getSlantedLine(goalRect)
-        const x1 = netLine.x1
-        const y1 = netLine.y1
-        const x2 = goalRect.x + goalRect.w
-        const y2 = goalRect.y
-        const barLength = Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
-        const angle = Math.atan2(y2 - y1, x2 - x1)
-        return {
-          x: x1,
-          y: y1,
-          w: barLength,
-          h: barThickness,
-          angle,
-          thicknessDirection: -1, // -1 = upwards
-        }
-      },
+      getRect: (goalRect: { x: number; y: number; w: number; h: number }) =>
+        getTopBarRect(
+          goalRect,
+          getSlantedLine(goalRect, this.netLineTopRatio, this.netLineBottomRatio, this.netLineAngle),
+        ),
       damping: 0.6,
     },
   }
@@ -303,7 +282,7 @@ export class FootballGame extends GameBase {
         netX,
         netY,
         netW,
-        netH
+        netH,
       )
     }
 
@@ -592,21 +571,19 @@ export class FootballGame extends GameBase {
     // Ball center
     const bx = ballXpx
     const by = ballYpx
-    // Line: (x1, y1) to (x2, y2)
-    const { x1, y1, x2, y2 } = netLine
     // Project ball center onto the line segment
-    const dx = x2 - x1
-    const dy = y2 - y1
-    const lengthSq = dx * dx + dy * dy
-    let t = ((bx - x1) * dx + (by - y1) * dy) / (lengthSq || 1e-6)
-    t = Math.max(0, Math.min(1, t))
-    const closestX = x1 + t * dx
-    const closestY = y1 + t * dy
-    const dist = Math.sqrt((bx - closestX) ** 2 + (by - closestY) ** 2)
+    const { t, closestX, closestY, dist } = projectPointOnLineSegment(
+      bx,
+      by,
+      netLine.x1,
+      netLine.y1,
+      netLine.x2,
+      netLine.y2,
+    )
     if (dist < ballRadiusPx) {
       // Normal vector (perpendicular to line)
-      let nx = dy / Math.sqrt(dx * dx + dy * dy)
-      let ny = -dx / Math.sqrt(dx * dx + dy * dy)
+      let nx = (netLine.y2 - netLine.y1) / Math.sqrt((netLine.x2 - netLine.x1) ** 2 + (netLine.y2 - netLine.y1) ** 2)
+      let ny = -(netLine.x2 - netLine.x1) / Math.sqrt((netLine.x2 - netLine.x1) ** 2 + (netLine.y2 - netLine.y1) ** 2)
       // Ensure normal always points away from the line toward the ball
       const dot = (bx - closestX) * nx + (by - closestY) * ny
       if (dot < 0) {
@@ -620,12 +597,9 @@ export class FootballGame extends GameBase {
       // Velocity in px/sec
       const vpx = this.ball.vel.x * fieldRect.drawW
       const vpy = this.ball.vel.y * fieldRect.drawH
-      const vDotN = vpx * nx + vpy * ny
       // Reflect and dampen
-      let vpxNew = vpx - 2 * vDotN * nx
-      let vpyNew = vpy - 2 * vDotN * ny
-      // Add a small bounce boost to prevent sticking/sliding
       const bounceBoost = 40
+      let { vx: vpxNew, vy: vpyNew } = reflectVelocity(vpx, vpy, nx, ny, 1)
       vpxNew += nx * bounceBoost
       vpyNew += ny * bounceBoost
       // Choose damping based on which side the ball hits from (nx > 0: right, nx < 0: left)
@@ -640,11 +614,7 @@ export class FootballGame extends GameBase {
     }
     // Top bar (goalpost) collision (true rectangle collision)
     const topBarRect = this.constraints.topBar.getRect(goalRect)
-    const cosA = Math.cos(-topBarRect.angle)
-    const sinA = Math.sin(-topBarRect.angle)
-    // Transform ball center into bar's local coordinates
-    const relX = (ballXpx - topBarRect.x) * cosA - (ballYpx - topBarRect.y) * sinA
-    const relY = (ballXpx - topBarRect.x) * sinA + (ballYpx - topBarRect.y) * cosA
+    const { x: relX, y: relY } = transformPoint(ballXpx, ballYpx, topBarRect.x, topBarRect.y, topBarRect.angle)
     // Rectangle is from (0, -topBarRect.h) to (topBarRect.w, 0)
     // Find closest point on rectangle to ball center
     let closestXBar = Math.max(0, Math.min(topBarRect.w, relX))
@@ -665,19 +635,17 @@ export class FootballGame extends GameBase {
       const newRelX = closestXBar + nx * ballRadiusPx
       const newRelY = closestYBar + ny * ballRadiusPx
       // Transform back to global
-      ballXpx = topBarRect.x + newRelX * cosA + newRelY * sinA
-      ballYpx = topBarRect.y - newRelX * sinA + newRelY * cosA
+      const global = transformPoint(newRelX, newRelY, 0, 0, -topBarRect.angle)
+      ballXpx = topBarRect.x + global.x
+      ballYpx = topBarRect.y + global.y
       // Transform normal to global
-      const nxG = nx * cosA + ny * sinA
-      const nyG = -nx * sinA + ny * cosA
+      const { x: nxG, y: nyG } = transformNormal(nx, ny, topBarRect.angle)
       // Reflect velocity
       const vpx = this.ball.vel.x * fieldRect.drawW
       const vpy = this.ball.vel.y * fieldRect.drawH
-      const vDotN = vpx * nxG + vpy * nyG
-      const vpxNew = vpx - 2 * vDotN * nxG
-      const vpyNew = vpy - 2 * vDotN * nyG
-      this.ball.vel.x = (vpxNew * this.constraints.topBar.damping) / fieldRect.drawW
-      this.ball.vel.y = (vpyNew * this.constraints.topBar.damping) / fieldRect.drawH
+      const { vx: vpxNew, vy: vpyNew } = reflectVelocity(vpx, vpy, nxG, nyG, this.constraints.topBar.damping)
+      this.ball.vel.x = vpxNew / fieldRect.drawW
+      this.ball.vel.y = vpyNew / fieldRect.drawH
       // Update ball position in rel units
       this.ball.pos.x = (ballXpx - fieldRect.offsetX) / fieldRect.drawW
       this.ball.pos.y = (ballYpx - fieldRect.offsetY) / fieldRect.drawH
