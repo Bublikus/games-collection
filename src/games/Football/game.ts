@@ -99,7 +99,8 @@ export class FootballGame extends GameBase {
           }
         }
       },
-      damping: 0.03,
+      dampingLeft: 0.5, // Ball hits from left
+      dampingRight: 0.03, // Ball hits from right
     },
     topBar: {
       // Returns a rectangle for the top bar (goalpost)
@@ -603,28 +604,34 @@ export class FootballGame extends GameBase {
     const closestY = y1 + t * dy
     const dist = Math.sqrt((bx - closestX) ** 2 + (by - closestY) ** 2)
     if (dist < ballRadiusPx) {
-      // Collision! Reflect ball velocity over the line normal (works for both sides)
       // Normal vector (perpendicular to line)
       let nx = dy / Math.sqrt(dx * dx + dy * dy)
       let ny = -dx / Math.sqrt(dx * dx + dy * dy)
-      // Ensure normal always points away from the ball's center (for both sides)
+      // Ensure normal always points away from the line toward the ball
       const dot = (bx - closestX) * nx + (by - closestY) * ny
       if (dot < 0) {
         nx = -nx
         ny = -ny
       }
-      // Move ball out of the net
-      ballXpx = closestX + nx * ballRadiusPx
-      ballYpx = closestY + ny * ballRadiusPx
+      // Move ball out of the net (push out by the overlap amount)
+      const overlap = ballRadiusPx - dist
+      ballXpx += nx * overlap
+      ballYpx += ny * overlap
       // Velocity in px/sec
       const vpx = this.ball.vel.x * fieldRect.drawW
       const vpy = this.ball.vel.y * fieldRect.drawH
       const vDotN = vpx * nx + vpy * ny
       // Reflect and dampen
-      const vpxNew = vpx - 2 * vDotN * nx
-      const vpyNew = vpy - 2 * vDotN * ny
-      this.ball.vel.x = (vpxNew * this.constraints.net.damping) / fieldRect.drawW
-      this.ball.vel.y = (vpyNew * this.constraints.net.damping) / fieldRect.drawH
+      let vpxNew = vpx - 2 * vDotN * nx
+      let vpyNew = vpy - 2 * vDotN * ny
+      // Add a small bounce boost to prevent sticking/sliding
+      const bounceBoost = 40
+      vpxNew += nx * bounceBoost
+      vpyNew += ny * bounceBoost
+      // Choose damping based on which side the ball hits from (nx > 0: right, nx < 0: left)
+      const damping = nx > 0 ? this.constraints.net.dampingRight : this.constraints.net.dampingLeft
+      this.ball.vel.x = (vpxNew * damping) / fieldRect.drawW
+      this.ball.vel.y = (vpyNew * damping) / fieldRect.drawH
       // Update ball position in rel units
       this.ball.pos.x = (ballXpx - fieldRect.offsetX) / fieldRect.drawW
       this.ball.pos.y = (ballYpx - fieldRect.offsetY) / fieldRect.drawH
